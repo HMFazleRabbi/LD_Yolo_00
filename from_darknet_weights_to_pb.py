@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from core.yolov3 import YOLOV3
 from from_darknet_weights_to_ckpt import load_weights
 

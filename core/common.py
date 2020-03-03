@@ -11,7 +11,8 @@
 #
 #================================================================
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def convolutional(input_data, filters_shape, trainable, name, downsample=False, activate=True, bn=True):

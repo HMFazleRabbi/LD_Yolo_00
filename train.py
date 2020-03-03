@@ -15,7 +15,8 @@ import os
 import time
 import shutil
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import core.utils as utils
 from tqdm import tqdm
 from core.dataset import Dataset
@@ -41,7 +42,10 @@ class YoloTrain(object):
         self.trainset            = Dataset('train')
         self.testset             = Dataset('test')
         self.steps_per_period    = len(self.trainset)
-        self.sess                = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        self.sess                = tf.Session(config=tf.ConfigProto(
+            allow_soft_placement=True,
+            # gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+            ))
 
         with tf.name_scope('define_input'):
             self.input_data   = tf.placeholder(dtype=tf.float32, name='input_data')
@@ -65,6 +69,7 @@ class YoloTrain(object):
             self.global_step = tf.Variable(1.0, dtype=tf.float64, trainable=False, name='global_step')
             warmup_steps = tf.constant(self.warmup_periods * self.steps_per_period,
                                         dtype=tf.float64, name='warmup_steps')
+
             train_steps = tf.constant( (self.first_stage_epochs + self.second_stage_epochs)* self.steps_per_period,
                                         dtype=tf.float64, name='train_steps')
             self.learn_rate = tf.cond(

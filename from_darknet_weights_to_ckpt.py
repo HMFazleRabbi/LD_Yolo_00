@@ -2,8 +2,9 @@ import tensorflow as tf
 from core.yolov3 import YOLOV3
 
 iput_size = 416
-darknet_weights = '<your yolov3.weights' path>'
+darknet_weights = '<your yolov3.weights path > '
 ckpt_file = './checkpoint/yolov3_coco.ckpt'
+
 
 def load_weights(var_list, weights_file):
     """
@@ -61,9 +62,10 @@ def load_weights(var_list, weights_file):
             i += 1
     print('ptr:', ptr)
     return assign_ops
-    
+
+
 with tf.name_scope('input'):
-    input_data = tf.placeholder(dtype=tf.float32,shape=(None, iput_size, iput_size, 3), name='input_data')
+    input_data = tf.placeholder(dtype=tf.float32, shape=(None, iput_size, iput_size, 3), name='input_data')
 model = YOLOV3(input_data, trainable=False)
 load_ops = load_weights(tf.global_variables(), darknet_weights)
 

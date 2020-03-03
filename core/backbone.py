@@ -12,7 +12,8 @@
 #================================================================
 
 import core.common as common
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def darknet53(input_data, trainable):
@@ -53,7 +54,5 @@ def darknet53(input_data, trainable):
             input_data = common.residual_block(input_data, 1024, 512, 1024, trainable=trainable, name='residual%d' %(i+19))
 
         return route_1, route_2, input_data
-
-
 
 
