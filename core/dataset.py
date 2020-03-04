@@ -34,6 +34,7 @@ class Dataset(object):
         self.strides = np.array(cfg.YOLO.STRIDES)
         self.classes = utils.read_class_names(cfg.YOLO.CLASSES)
         self.num_classes = len(self.classes)
+        self.channels    = cfg.YOLO.CHANNELS
         self.anchors = np.array(utils.get_anchors(cfg.YOLO.ANCHORS))
         self.anchor_per_scale = cfg.YOLO.ANCHOR_PER_SCALE
         self.max_bbox_per_scale = 150
@@ -60,7 +61,7 @@ class Dataset(object):
             self.train_input_size = random.choice(self.train_input_sizes)
             self.train_output_sizes = self.train_input_size // self.strides
 
-            batch_image = np.zeros((self.batch_size, self.train_input_size, self.train_input_size, 3))
+            batch_image = np.zeros((self.batch_size, self.train_input_size, self.train_input_size, self.channels))
 
             batch_label_sbbox = np.zeros((self.batch_size, self.train_output_sizes[0], self.train_output_sizes[0],
                                           self.anchor_per_scale, 5 + self.num_classes))
@@ -260,3 +261,45 @@ class Dataset(object):
 
 
 
+class MultichannelDataset(Dataset):
+
+    def __init__(self, dataset_type):
+        super().__init__(dataset_type)
+
+    def parse_annotation(self, annotation):
+        line = annotation.split()
+        image_path = line[0]
+        if not os.path.exists(image_path):
+            raise KeyError("%s does not exist ... " %image_path)
+        image = np.array(cv2.imread(image_path))
+        image = np.concatenate((image, image), axis=2)
+        # cv2.imwrite("a.png",image[:,:,1])
+        
+        bboxes = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
+
+        for i in range(self.channels):
+            name="MultichannelDataset-BF-{}.png".format(i)
+            cv2.imwrite(name,image[:,:,i])
+
+        if self.data_aug:
+            image, bboxes = self.random_horizontal_flip(np.copy(image), np.copy(bboxes))
+            # cv2.imwrite("b.png",image[:,:,1])
+            image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))
+            # cv2.imwrite("c.png",image[:,:,3])
+            image, bboxes = self.random_translate(np.copy(image), np.copy(bboxes))
+            # cv2.imwrite("d.png",image[:,:,4])
+
+        image, bboxes = utils.image_preporcess_multichannel(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes))
+        
+        for i in range(self.channels):
+            name="MultichannelDataset-AF-{}.png".format(i)
+            cv2.imwrite(name,image[:,:,i] *255.)
+        return image, bboxes
+        
+
+if __name__ == "__main__":
+    testset             = Dataset('test')
+    trainset            = MultichannelDataset('train')
+    for i in trainset:
+        print(i)
+    pass        

@@ -19,7 +19,7 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import core.utils as utils
 from tqdm import tqdm
-from core.dataset import Dataset
+from core.dataset import Dataset, MultichannelDataset
 from core.yolov3 import YOLOV3
 from core.config import cfg
 
@@ -28,6 +28,7 @@ class YoloTrain(object):
     def __init__(self):
         self.anchor_per_scale    = cfg.YOLO.ANCHOR_PER_SCALE
         self.classes             = utils.read_class_names(cfg.YOLO.CLASSES)
+        self.channels            = cfg.YOLO.CHANNELS
         self.num_classes         = len(self.classes)
         self.learn_rate_init     = cfg.TRAIN.LEARN_RATE_INIT
         self.learn_rate_end      = cfg.TRAIN.LEARN_RATE_END
@@ -39,8 +40,10 @@ class YoloTrain(object):
         self.moving_ave_decay    = cfg.YOLO.MOVING_AVE_DECAY
         self.max_bbox_per_scale  = 150
         self.train_logdir        = "./data/log/train"
-        self.trainset            = Dataset('train')
-        self.testset             = Dataset('test')
+        # self.trainset            = Dataset('train')
+        # self.testset             = Dataset('test')
+        self.trainset            = MultichannelDataset('train')
+        self.testset             = MultichannelDataset('test')
         self.steps_per_period    = len(self.trainset)
         self.sess                = tf.Session(config=tf.ConfigProto(
             allow_soft_placement=True,
@@ -183,6 +186,7 @@ class YoloTrain(object):
             print("=> Epoch: %2d Time: %s Train loss: %.2f Test loss: %.2f Saving %s ..."
                             %(epoch, log_time, train_epoch_loss, test_epoch_loss, ckpt_file))
             self.saver.save(self.sess, ckpt_file, global_step=epoch)
+            
 
 
 

@@ -35,13 +35,12 @@ def get_anchors(anchors_path):
     anchors = np.array(anchors.split(','), dtype=np.float32)
     return anchors.reshape(3, 3, 2)
 
-
 def image_preporcess(image, target_size, gt_boxes=None):
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
 
     ih, iw    = target_size
-    h,  w, _  = image.shape
+    h,  w, c  = image.shape
 
     scale = min(iw/w, ih/h)
     nw, nh  = int(scale * w), int(scale * h)
@@ -59,7 +58,6 @@ def image_preporcess(image, target_size, gt_boxes=None):
         gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
         gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
         return image_paded, gt_boxes
-
 
 def draw_bbox(image, bboxes, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True):
     """
@@ -211,3 +209,37 @@ def postprocess_boxes(pred_bbox, org_img_shape, input_size, score_threshold):
 
 
 
+# /* Multichannels Support*/
+# /*************************************************************
+# *   Author          : H M Fazle Rabbi
+# *	 Description	  : Process the multiple channels.
+# *  Last Modified   : 20200304_0859
+# *  Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************/
+def image_preporcess_multichannel(image, target_size, gt_boxes=None):
+
+    image = image.astype(np.float32)
+
+    ih, iw    = target_size
+    h,  w, c  = image.shape
+
+    scale = min(iw/w, ih/h)
+    nw, nh  = int(scale * w), int(scale * h)
+    image_resized = cv2.resize(image, (nw, nh))
+    # cv2.imwrite("e.png",image[:,:,1])
+
+    # Pad
+    image_paded = np.full(shape=[ih, iw, c], fill_value=128.0)
+    dw, dh = (iw - nw) // 2, (ih-nh) // 2
+    image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
+    # cv2.imwrite("f.png",image_resized[:,:,1])
+    image_paded = image_paded / 255.
+
+    # GT
+    if gt_boxes is None:
+        return image_paded
+
+    else:
+        gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
+        gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
+        return image_paded, gt_boxes

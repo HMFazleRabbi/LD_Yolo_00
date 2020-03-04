@@ -20,7 +20,8 @@ def darknet53(input_data, trainable):
 
     with tf.variable_scope('darknet'):
 
-        input_data = common.convolutional(input_data, filters_shape=(3, 3,  3,  32), trainable=trainable, name='conv0')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3,  6,  32), trainable=trainable, name='conv0')
+        # input_data = common.convolutional(input_data, filters_shape=(3, 3,  3,  32), trainable=trainable, name='conv0')
         input_data = common.convolutional(input_data, filters_shape=(3, 3, 32,  64),
                                           trainable=trainable, name='conv1', downsample=True)
 
