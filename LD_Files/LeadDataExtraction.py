@@ -172,19 +172,23 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
             # Empty checker
             if (np.max(pin_list) == 0):
                 print("WARNING: Detected {} pins in {} ({}) but all pins coordinate are set to zero. Skip extraction !", boardname, row['refDes'], row['pin_num'])
-                continue
+                # continue
             if (np.max(bodydims) == 0):
                 print("WARNING: Bodydims coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
-                continue
+                # continue
             if (np.max(searchArea) == 0):
                 print("WARNING: searchArea coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
-                continue
+                # continue
 
             #Load all images
             selected_image_dir = os.path.dirname(  row['path'][:-1] if row['path'].endswith("/") else row['path']) # -1 for mistakes in csv, done to skip end slash
-            full_selected_image_dir=os.path.join(root_dir, boardname, selected_image_dir)
+            if boardname in  selected_image_dir:
+                full_selected_image_dir=os.path.join(root_dir, selected_image_dir)
+            else:
+                full_selected_image_dir=os.path.join(root_dir, boardname, selected_image_dir)
             jpg_paths = [f for f in glob.glob(full_selected_image_dir + "/*.jpg", recursive=True)]
             pmg_paths = [f for f in glob.glob(full_selected_image_dir + "/*.pgm", recursive=True)]
+            if (jpg_paths.__len__() < 1): print("WARNING: Images not found!")
             print("Extracting {} Board|\t {}\t|\t {} pins|\t {} ".format(boardname, row['refDes'], row['pin_num'],row['package']))
 
             # Crop image
@@ -241,12 +245,12 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                 label_list.append(line)
 
                 if(_DEBUG & 3):
-                    x1 =  bodydims[0] + offsetX
-                    y1 =  bodydims[1] + offsetY
-                    x2 =  bodydims[2] + offsetX
-                    y2 =  bodydims[3] + offsetY                
-                    centroid_x = bodydims[7]+ offsetX
-                    centroid_y = bodydims[8]+ offsetY                
+                    x1 =  bodydims[0]
+                    y1 =  bodydims[1]
+                    x2 =  bodydims[2]
+                    y2 =  bodydims[3]                
+                    centroid_x = bodydims[7]
+                    centroid_y = bodydims[8]               
                     
                     p1 = (int(x1), int(y1))
                     p2 = (int(x2), int(y2))
@@ -260,19 +264,19 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                         offsetX = searchArea[4]- bodydims[7]
                         offsetY = searchArea[5]- bodydims[8]
 
-                        x1 =  pin[0] - searchArea[0]+ offsetX
-                        y1 =  pin[1] - searchArea[1]+ offsetY
-                        x2 =  pin[2] - searchArea[0]+ offsetX
-                        y2 =  pin[3] - searchArea[1]+ offsetY
+                        x1 =  pin[0] - searchArea[0]
+                        y1 =  pin[1] - searchArea[1]
+                        x2 =  pin[2] - searchArea[0]
+                        y2 =  pin[3] - searchArea[1]
                         line = "{},{},{},{},{}".format(x1,y1,x2,y2,Label.pins.value)
                         label_list.append(line)
                         
                         # Debug
                         if(_DEBUG & 3):
-                            x1 =  pin[0]+ offsetX 
-                            y1 =  pin[1]+ offsetY 
-                            x2 =  pin[2]+ offsetX 
-                            y2 =  pin[3]+ offsetY 
+                            x1 =  pin[0]
+                            y1 =  pin[1]
+                            x2 =  pin[2]
+                            y2 =  pin[3]
                             p1 = (int(x1), int(y1))
                             p2 = (int(x2), int(y2))
                             cv2.rectangle(img, p1,p2, fontColorPins, 3)
@@ -298,6 +302,7 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                 cv2.imwrite(os.path.join(debug_output_path, 'name.jpg'), img)
                 cv2.imwrite(os.path.join(debug_output_path, name), img[y1:y2, x1:x2])
                 
+                # Show image
                 # cv2.imshow("Debug window", img[y1:y2, x1:x2])
                 # cv2.waitKey(0) # waits until a key is pressed
                 # cv2.destroyAllWindows() # destroys the window showing image
@@ -313,7 +318,7 @@ if __name__ == '__main__':
     # parser.add_argument("--output_dir", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/9611GCR2-T-7/output_images"))
 
 #  Extract
-    parser.add_argument("--root_fpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files"))
+    parser.add_argument("--root_fpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/Boards/13-8-2019/JW/success"))
     parser.add_argument("--boardname", default="9611GCR2-T-7")
     parser.add_argument("--tile_csvpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/9611GCR2-T-7/output/all_tiles.csv"))
     parser.add_argument("--output_dir", default=os.path.normpath("./Output_ComponentByBoard"))
