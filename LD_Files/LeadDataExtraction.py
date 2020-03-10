@@ -17,6 +17,7 @@ import argparse
 
 # Define
 _DEBUG = 3
+LABEL_TOOL=1
 
 # Enum Definition ------------------------------------------------------|
 class Label(Enum):
@@ -158,27 +159,29 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
     fontColorBody          = (0,255,0)
     fontColorPins          = (230,255,0)
     lineType               = 2
+    countdown = 3
 
     # Iterate
     for itileinfodf, row in tile_info_df.iterrows():
 
-        if (row['pin_num']>0 and row['package']!="CC" and row['package']!="CR"):
+
+        if ( row['package']!="CC" and row['package']!="CR"and row['package']!="LED" and row['package']!="unknown"): #row['pin_num']>0 and
 
             #Seprate DF info
             if (row['body_dims']):  bodydims = json.loads(row['body_dims']) 
             if (row['pins_dims']):  pin_list = json.loads(row['pins_dims'])     
             if (row['searchArea']): searchArea = json.loads(row['searchArea'])  
 
-            # Empty checker
-            if (np.max(pin_list) == 0):
-                print("WARNING: Detected {} pins in {} ({}) but all pins coordinate are set to zero. Skip extraction !", boardname, row['refDes'], row['pin_num'])
-                # continue
-            if (np.max(bodydims) == 0):
-                print("WARNING: Bodydims coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
-                # continue
-            if (np.max(searchArea) == 0):
-                print("WARNING: searchArea coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
-                # continue
+            # # Empty checker
+            # if (np.max(pin_list) == 0):
+            #     print("WARNING: Detected {} pins in {} ({}) but all pins coordinate are set to zero. Skip extraction !", boardname, row['refDes'], row['pin_num'])
+            #     # continue
+            # if (np.max(bodydims) == 0):
+            #     print("WARNING: Bodydims coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
+            #     # continue
+            # if (np.max(searchArea) == 0):
+            #     print("WARNING: searchArea coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
+            #     # continue
 
             #Load all images
             selected_image_dir = os.path.dirname(  row['path'][:-1] if row['path'].endswith("/") else row['path']) # -1 for mistakes in csv, done to skip end slash
@@ -231,16 +234,23 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                         cv2.rectangle(img, p1,p2, fontColorSearchArea, 3)
                         if(row['refDes']):
                             cv2.putText(img, row['refDes'], (x1,y1-10), font, fontScale, fontColorSearchArea, lineType)
+                
+                if(LABEL_TOOL):
+                    labelling_dirpath=os.path.join(output_dir,"LABEL_IMG")
+                    name = boardname+'_'+row['refDes'].replace(':','')+'.jpg'
 
+                    if not os.path.exists(labelling_dirpath):
+                        os.mkdir(labelling_dirpath)
+                    cv2.imwrite(os.path.join(labelling_dirpath, name), cropped_img)
 
             # Body dims
             if(row['body_dims']):
-                offsetX = searchArea[4]- bodydims[7]
-                offsetY = searchArea[5]- bodydims[8]
-                x1 =  bodydims[0] - searchArea[0] + offsetX
-                y1 =  bodydims[1] - searchArea[1] + offsetY
-                x2 =  bodydims[2] - searchArea[0] + offsetX
-                y2 =  bodydims[3] - searchArea[1] + offsetY   
+                # offsetX = searchArea[4]- bodydims[7]
+                # offsetY = searchArea[5]- bodydims[8]
+                x1 =  bodydims[0] - searchArea[0]
+                y1 =  bodydims[1] - searchArea[1]
+                x2 =  bodydims[2] - searchArea[0]
+                y2 =  bodydims[3] - searchArea[1]   
                 line="{},{},{},{},{}".format(x1,y1,x2,y2, Label.body.value)
                 label_list.append(line)
 
@@ -261,8 +271,8 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
             if(row['pins_dims']):
                 if(pin_list):
                     for pin in pin_list:
-                        offsetX = searchArea[4]- bodydims[7]
-                        offsetY = searchArea[5]- bodydims[8]
+                        # offsetX = searchArea[4]- bodydims[7]
+                        # offsetY = searchArea[5]- bodydims[8]
 
                         x1 =  pin[0] - searchArea[0]
                         y1 =  pin[1] - searchArea[1]
@@ -284,6 +294,7 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
             #Write Labels
             name = boardname+'_'+row['refDes'].replace(':','')+'.txt'
             label_path = os.path.join(output_dir,name)
+            label_path = os.path.join(labelling_dirpath,name) #LABELLING
             with open(label_path ,'w') as f:
                 for element in label_list:
                     f.write(element)
@@ -303,9 +314,11 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                 cv2.imwrite(os.path.join(debug_output_path, name), img[y1:y2, x1:x2])
                 
                 # Show image
-                # cv2.imshow("Debug window", img[y1:y2, x1:x2])
-                # cv2.waitKey(0) # waits until a key is pressed
-                # cv2.destroyAllWindows() # destroys the window showing image
+                if (countdown !=0):
+                    countdown = countdown-1
+                    cv2.imshow("Debug window", img[y1:y2, x1:x2])
+                    cv2.waitKey(0) # waits until a key is pressed
+                    cv2.destroyAllWindows() # destroys the window showing image
             
 
 
@@ -319,9 +332,9 @@ if __name__ == '__main__':
 
 #  Extract
     parser.add_argument("--root_fpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/Boards/13-8-2019/JW/success"))
-    parser.add_argument("--boardname", default="9611GCR2-T-7")
-    parser.add_argument("--tile_csvpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/9611GCR2-T-7/output/all_tiles.csv"))
-    parser.add_argument("--output_dir", default=os.path.normpath("./Output_ComponentByBoard"))
+    parser.add_argument("--boardname", default="9608_t_1_90_r")
+    parser.add_argument("--tile_csvpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/Boards/13-8-2019/JW/success/9608_t_1_90_r/output/updated_all_tiles.csv"))
+    parser.add_argument("--output_dir", default=os.path.normpath("./LD_Files/Output_ComponentByBoard"))
 #  ExtractEnd: 
 
     flags = parser.parse_args()

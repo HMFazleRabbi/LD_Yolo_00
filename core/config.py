@@ -23,29 +23,28 @@ cfg                             = __C
 __C.YOLO                        = edict()
 
 # Set the class name
-__C.YOLO.CHANNELS               = 6
-__C.YOLO.CLASSES                = "./data/classes/voc.names"
+__C.YOLO.CHANNELS               = 3 # 6
+__C.YOLO.CLASSES                = "./data/classes/lead_detector.names"
 __C.YOLO.ANCHORS                = "./data/anchors/basline_anchors.txt"
-__C.YOLO.MOVING_AVE_DECAY       = 0.9995
+__C.YOLO.MOVING_AVE_DECAY       = 0.9995 
 __C.YOLO.STRIDES                = [8, 16, 32]
 __C.YOLO.ANCHOR_PER_SCALE       = 3
 __C.YOLO.IOU_LOSS_THRESH        = 0.5
 __C.YOLO.UPSAMPLE_METHOD        = "resize"
-__C.YOLO.ORIGINAL_WEIGHT        = "./checkpoint/yolov3_voc.ckpt"
-__C.YOLO.DEMO_WEIGHT            = "./checkpoint/yolov3_voc_demo.ckpt"
+__C.YOLO.ORIGINAL_WEIGHT        = "./checkpoint/Pretrained_weights/yolov3_coco.ckpt"
+__C.YOLO.DEMO_WEIGHT            = "./checkpoint/Pretrained_weights/Yolov3_Coco_Pretrained.ckpt"
 
 # Train options
 __C.TRAIN                       = edict()
-
-__C.TRAIN.ANNOT_PATH            = "./data/dataset/voc_train.txt"
+__C.TRAIN.ANNOT_PATH            = "D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/dataset/LD_Dataset_00/train"
 __C.TRAIN.BATCH_SIZE            = 1 #1 #6
 __C.TRAIN.INPUT_SIZE            = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
-__C.TRAIN.DATA_AUG              = True
+__C.TRAIN.DATA_AUG              = False
 __C.TRAIN.LEARN_RATE_INIT       = 1e-4
 __C.TRAIN.LEARN_RATE_END        = 1e-6
-__C.TRAIN.WARMUP_EPOCHS         = 1 #2
-__C.TRAIN.FISRT_STAGE_EPOCHS    = 1 #20
-__C.TRAIN.SECOND_STAGE_EPOCHS   = 1 #30
+__C.TRAIN.WARMUP_EPOCHS         = 2 #1 #2
+__C.TRAIN.FISRT_STAGE_EPOCHS    = 20 #1 #20
+__C.TRAIN.SECOND_STAGE_EPOCHS   = 30 #1 #30
 __C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/yolov3_coco_demo.ckpt"
 
 

@@ -11,7 +11,7 @@
 #
 #================================================================
 
-import os
+import os, glob
 import cv2
 import random
 import numpy as np
@@ -21,6 +21,15 @@ import core.utils as utils
 from core.config import cfg
 
 
+def CornerToCenterBBoxConverter(box):
+    xmin = box[0]
+    xmax = box[2]
+    ymin = box[1]
+    ymax = box[3]
+    box[0] = (xmax + xmin) //2
+    box[1] = (ymax + ymin) //2
+    box[2] = xmax - xmin
+    box[3] = ymax - ymin
 
 class Dataset(object):
     """implement Dataset here"""
@@ -49,6 +58,7 @@ class Dataset(object):
         with open(self.annot_path, 'r') as f:
             txt = f.readlines()
             annotations = [line.strip() for line in txt if len(line.strip().split()[1:]) != 0]
+            # annotations[6] is 'D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/dataset/VOC\\test/VOCdevkit/VOC2007\\JPEGImages\\000010.jpg 87,97,258,427,12 133,72,245,284,14'
         np.random.shuffle(annotations)
         return annotations
 
@@ -259,6 +269,148 @@ class Dataset(object):
         return self.num_batchs
 
 
+class DatasetVitroxFormat(Dataset):
+    
+    """ Dataloader in vitrox OD supported format """
+    def __init__(self, dataset_type):
+        self.annot_path  = cfg.TRAIN.ANNOT_PATH if dataset_type == 'train' else cfg.TEST.ANNOT_PATH
+        self.input_sizes = cfg.TRAIN.INPUT_SIZE if dataset_type == 'train' else cfg.TEST.INPUT_SIZE
+        self.batch_size  = cfg.TRAIN.BATCH_SIZE if dataset_type == 'train' else cfg.TEST.BATCH_SIZE
+        self.data_aug    = cfg.TRAIN.DATA_AUG   if dataset_type == 'train' else cfg.TEST.DATA_AUG
+
+        self.train_input_sizes = cfg.TRAIN.INPUT_SIZE
+        self.strides = np.array(cfg.YOLO.STRIDES)
+        self.classes = utils.read_class_names(cfg.YOLO.CLASSES)
+        self.num_classes = len(self.classes)
+        self.channels    = cfg.YOLO.CHANNELS
+        self.anchors = np.array(utils.get_anchors(cfg.YOLO.ANCHORS))
+        self.anchor_per_scale = cfg.YOLO.ANCHOR_PER_SCALE
+        self.max_bbox_per_scale = 150
+
+        self.annotations = self.load_annotations(dataset_type)
+        self.num_samples = len(self.annotations)
+        self.num_batchs = int(np.ceil(self.num_samples / self.batch_size))
+        self.batch_count = 0
+
+    def load_annotations(self, dataset_type):
+        pattern = os.path.join(os.path.normpath(self.annot_path), "*.txt")
+        txt_flist = glob.glob(pattern)
+
+        annotations=[]
+        for fname in txt_flist:
+            with open(fname, 'r') as f:
+                txt = f.read()
+                txt = txt.strip()
+                txt = txt.replace("\n", " ")
+                # if txt[-1] ==',': txt = txt[:-1]
+                txt = fname + ' ' + txt
+                if (len(txt.strip().split(',')[1:]) !=0):
+                    annotations.append(txt.strip())
+        # np.random.shuffle(annotations)
+        return annotations
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        
+        with tf.device('/cpu:0'):
+            self.train_input_size = random.choice(self.train_input_sizes)
+            self.train_output_sizes = self.train_input_size // self.strides
+
+            batch_image = np.zeros((self.batch_size, self.train_input_size, self.train_input_size, self.channels))
+
+            batch_label_sbbox = np.zeros((self.batch_size, self.train_output_sizes[0], self.train_output_sizes[0],
+                                          self.anchor_per_scale, 5 + self.num_classes))
+            batch_label_mbbox = np.zeros((self.batch_size, self.train_output_sizes[1], self.train_output_sizes[1],
+                                          self.anchor_per_scale, 5 + self.num_classes))
+            batch_label_lbbox = np.zeros((self.batch_size, self.train_output_sizes[2], self.train_output_sizes[2],
+                                          self.anchor_per_scale, 5 + self.num_classes))
+
+            batch_sbboxes = np.zeros((self.batch_size, self.max_bbox_per_scale, 4))
+            batch_mbboxes = np.zeros((self.batch_size, self.max_bbox_per_scale, 4))
+            batch_lbboxes = np.zeros((self.batch_size, self.max_bbox_per_scale, 4))
+
+            num = 0
+            if self.batch_count < self.num_batchs:
+                while num < self.batch_size:
+                    index = self.batch_count * self.batch_size + num
+                    if index >= self.num_samples: index -= self.num_samples
+                    annotation = self.annotations[index]
+                    image, bboxes = self.parse_annotation(annotation)
+                    label_sbbox, label_mbbox, label_lbbox, sbboxes, mbboxes, lbboxes = self.preprocess_true_boxes(bboxes)
+
+                    batch_image[num, :, :, :] = image
+                    batch_label_sbbox[num, :, :, :, :] = label_sbbox
+                    batch_label_mbbox[num, :, :, :, :] = label_mbbox
+                    batch_label_lbbox[num, :, :, :, :] = label_lbbox
+                    batch_sbboxes[num, :, :] = sbboxes
+                    batch_mbboxes[num, :, :] = mbboxes
+                    batch_lbboxes[num, :, :] = lbboxes
+                    num += 1
+                self.batch_count += 1
+                return batch_image, batch_label_sbbox, batch_label_mbbox, batch_label_lbbox, \
+                       batch_sbboxes, batch_mbboxes, batch_lbboxes
+            else:
+                self.batch_count = 0
+                np.random.shuffle(self.annotations)
+                raise StopIteration
+
+    def parse_annotation(self, annotation):
+
+        line = annotation.split()
+        image_path = line[0]
+        image_path = image_path[:-4] + "_8.jpg"
+        if not os.path.exists(image_path):
+            raise KeyError("%s does not exist ... " %image_path)
+        image = np.array(cv2.imread(image_path))
+        bboxes = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
+       
+        # Converting to cx,cy,w,h format
+        bboxes_xywh = np.zeros_like(bboxes)
+        bboxes_xywh[:,0] = (bboxes[:,0] + bboxes[:,2]) //2
+        bboxes_xywh[:,1] = (bboxes[:,1] + bboxes[:,3]) //2
+        bboxes_xywh[:,2] = bboxes[:,2] - bboxes[:,0]
+        bboxes_xywh[:,3] = bboxes[:,3] - bboxes[:,1]
+        bboxes_xywh[:,4] = bboxes[:,4]
+        # bboxes_xywh=[[10, 10, 35, 35, 1]]
+        print(annotation, image_path)
+
+        
+        # Sanity check
+        if (bboxes_xywh.min()<0):
+            print("Error: bboxes_xywh.min()<0 ")
+        if (bboxes[:,[0,2]].max()>image.shape[1] ):
+            print("Error: bboxes[:,[0,2]].max()>image.shape[1] ")
+        if (bboxes[:,[1,3]].max()>image.shape[0] ):
+            print("Error: bboxes[:,[1,3]].max()>image.shape[0] ")
+        if (bboxes_xywh[:,[0,2]].max()>image.shape[1]): 
+            print("ERROR: Location exceed image width by",bboxes_xywh[:,2].max()-image.shape[1])
+        if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
+            print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
+
+
+        if self.data_aug:
+            image, bboxes_xywh = self.random_horizontal_flip(np.copy(image), np.copy(bboxes_xywh))
+            image, bboxes_xywh = self.random_crop(np.copy(image), np.copy(bboxes_xywh))
+            image, bboxes_xywh = self.random_translate(np.copy(image), np.copy(bboxes_xywh))
+            # print("AUG: " , bboxes_xywh)
+
+
+        image, bboxes_xywh = utils.image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes_xywh))
+        
+        if (bboxes_xywh.min()<0):
+            if (bboxes_xywh[:,[0,2]].max()>image.shape[1]): 
+                print("ERROR: Location exceed image width by",bboxes_xywh[:,2].max()-image.shape[1])
+            if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
+                print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
+
+            with  open("./Corrupted.txt", "a") as myfile:
+                myfile.write(annotation.split()[0])
+                myfile.write("\n")
+            # raise KeyError("Error: Mismatched dimension! ", bboxes_xywh)
+            
+        return image, bboxes_xywh
 
 
 class MultichannelDataset(Dataset):
@@ -299,7 +451,8 @@ class MultichannelDataset(Dataset):
 
 if __name__ == "__main__":
     testset             = Dataset('test')
-    trainset            = MultichannelDataset('train')
-    for i in trainset:
+    # trainset            = MultichannelDataset('train')
+    mydataset = DatasetVitroxFormat('train')
+    for i, _ in enumerate(mydataset):
         print(i)
     pass        

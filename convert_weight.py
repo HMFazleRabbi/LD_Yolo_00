@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--train_from_coco", action='store_true')
 flag = parser.parse_args()
 
-org_weights_path = cfg.YOLO.ORIGINAL_WEIGHT
+org_weights_path = cfg.YOLO.ORIGINAL_WEIGHT #Path to pretrained weights: D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/checkpoint/Pretrained_weights/yolov3_coco.ckpt
 cur_weights_path = cfg.YOLO.DEMO_WEIGHT
 preserve_cur_names = ['conv_sbbox', 'conv_mbbox', 'conv_lbbox']
 preserve_org_names = ['Conv_6', 'Conv_14', 'Conv_22']
