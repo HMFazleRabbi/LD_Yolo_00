@@ -14,7 +14,7 @@ import numpy as np
 from enum import Enum
 from helper import trace, RetrieveColsInDf, RemoveRowsInDF, RetrieveRowsInDf
 import argparse
-
+import inspect
 # Define
 _DEBUG = 3
 LABEL_TOOL=1
@@ -95,6 +95,50 @@ def GenAllImagesWithBBox(img_file, tst_dir, data, tileno):
     print("[SUCCESS]: Image bbox overlay completed!")
 
 
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Validation invalid coordinates in x1, y1...
+#   Date Modified: 
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
+def validate_x1y1x2y2 (x1,x2,y1,y2, xmin, xmax, ymin, ymax, msg):
+    success = True
+    callerframerecord = inspect.stack()[1]
+    frame = callerframerecord[0]
+    info = inspect.getframeinfo(frame)
+
+    if ((x1 > xmax) or (x2 > xmax)):
+        success = False
+        print("Failed: ((x1 > xmax) or (x2 > xmax))")
+    if ((x1 < xmin) or (x2 < xmin)):
+        success = False
+        print("Failed: ((x1 < xmin) or (x2 < xmin))")
+
+    if ((y1 > ymax) or (y2 > ymax)):
+        success = False
+        print("Failed: ((y1 > ymax) or (y2 > ymax))")
+    if ((y1 < ymin) or (y2 < ymin)):
+        success = False
+        print("Failed: ((y1 < ymin) or (y2 < ymin))")
+
+
+    if ((x2 - x1) <= 1 ):
+        success = False
+        print("Failed: (x2 <= x1)")
+    if ((y2 - y1) <= 1):
+        success = False
+        print("Failed: (y2 <= y1)")
+
+    if not success:
+        print("Invalid coordinate:\n\t{} {} {} {} \n\t{} {} {} {}".format(x1,x2,y1,y2, xmin, xmax, ymin, ymax))
+        print("<{}> ({}):".format(info.function, info.lineno), msg)
+    return success
+
+def smart_pathjoin(root_dir, boardname, selected_image_dir):
+    selected_path = root_dir
+    full_selected_image_dir=os.path.join(root_dir, boardname, selected_image_dir)
+    selected_image_dir_list =selected_image_dir.split("/")
+    
 # Pins Maninulation --------------------------------------|
 # *************************************************************
 #   Author       : JW
@@ -144,9 +188,14 @@ def WritePinsCoordinateRelative2BodyCentroid(data_df, fname = "PinsCoordinateRel
 # End Pins Maninulation --------------------------------------|
 
 def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
+
+    # Read
     try:
         tile_info_df = pd.read_csv(tile_csvpath, delimiter=",")
-    except:
+    except FileNotFoundError:
+        raise ValueError("Missing file  {}".format(tile_csvpath))
+        sys.exit()
+    except Exception:
         raise ValueError("Failed to load {}".format(tile_csvpath))
         sys.exit()
 
@@ -183,20 +232,34 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
             #     print("WARNING: searchArea coordinate are set to zero. Skip extraction of {} {}!", boardname, row['refDes'])
             #     # continue
 
+            # ------------------------------
             #Load all images
+            # ------------------------------
             selected_image_dir = os.path.dirname(  row['path'][:-1] if row['path'].endswith("/") else row['path']) # -1 for mistakes in csv, done to skip end slash
             if boardname in  selected_image_dir:
-                full_selected_image_dir=os.path.join(root_dir, selected_image_dir)
+                full_selected_image_dir=os.path.join(root_dir, selected_image_dir.replace("JW/",""))
             else:
-                full_selected_image_dir=os.path.join(root_dir, boardname, selected_image_dir)
+                full_selected_image_dir=os.path.join(root_dir, boardname, selected_image_dir.replace("JW/",""))
+            if not (os.path.isdir(full_selected_image_dir)): 
+                raise IsADirectoryError("Invalid directory path {}".format(full_selected_image_dir))
+                sys.exit()
+              
             jpg_paths = [f for f in glob.glob(full_selected_image_dir + "/*.jpg", recursive=True)]
             pmg_paths = [f for f in glob.glob(full_selected_image_dir + "/*.pgm", recursive=True)]
-            if (jpg_paths.__len__() < 1): print("WARNING: Images not found!")
+            if (jpg_paths.__len__() < 1): 
+                raise FileExistsError("Empty jpeg file list 'jpg_paths.__len__() < 1' ")
+                sys.exit()
+            if (pmg_paths.__len__() < 1): 
+                raise FileExistsError("Empty pmg file list 'pmg_paths.__len__() < 1' ")
+                sys.exit()
             print("Extracting {} Board|\t {}\t|\t {} pins|\t {} ".format(boardname, row['refDes'], row['pin_num'],row['package']))
 
+            # ------------------------------
             # Crop image
+            # ------------------------------
             label_list=[]
             line=""
+            image_h, image_w = 0, 0
             if(row['searchArea']):
                 data = json.loads(row['searchArea'])
                 x1 =  searchArea[0]
@@ -207,33 +270,43 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                 # Read PGM
                 for i, p in enumerate(pmg_paths):
                     img = cv2.imread(p, cv2.IMREAD_UNCHANGED)  
-                    cropped_img = img[y1:y2, x1:x2] 
-                    pgm_name = boardname+'_'+row['refDes'].replace(':','')+'_'+str(i)+'.pgm'
-                    pgmcomment_name = boardname+'_'+row['refDes'].replace(':','')+'_'+str(i)+'.war'
-                    cv2.imwrite(os.path.join(output_dir, pgm_name), cropped_img)
+                    image_h, image_w=img.shape
+                    if (validate_x1y1x2y2(x1, x2, y1, y2, 0, image_w, 0, image_h, "Invalid dimension crop for pgm image")):
+                        cropped_img = img[y1:y2, x1:x2] 
+                        pgm_name = boardname+'_'+row['refDes'].replace(':','')+'_'+str(i)+'.pgm'
+                        pgmcomment_name = boardname+'_'+row['refDes'].replace(':','')+'_'+str(i)+'.war'
+                        cv2.imwrite(os.path.join(output_dir, pgm_name), cropped_img)
 
-                    # Comments: Warpage componsation information
-                    with open(p, 'rb') as f, open (os.path.join(output_dir, pgmcomment_name), 'w') as g:
-                        comments=[]
-                        for nline in range (6):
-                            line = f.readline()
-                            if (line.startswith(b'#')):
-                                g.write(line.decode('ascii'))
+                        # Comments: Warpage componsation information
+                        with open(p, 'rb') as f, open (os.path.join(output_dir, pgmcomment_name), 'w') as g:
+                            comments=[]
+                            for nline in range (6):
+                                line = f.readline()
+                                if (line.startswith(b'#')):
+                                    g.write(line.decode('ascii'))
+                    else:
+                        raise ValueError("Invalid crop dimension for {} {}".format(p, searchArea))
+                        sys.exit()
 
                 # Read JPG
                 for i, p in enumerate(jpg_paths):
                     img = cv2.imread(p)  
-                    cropped_img = img[y1:y2, x1:x2] 
-                    name = boardname+'_'+row['refDes'].replace(':','')+'_'+str(i)+'.jpg'
-                    cv2.imwrite(os.path.join(output_dir,name), cropped_img)
+                    if (validate_x1y1x2y2(x1, x2, y1, y2, 0, image_w, 0, image_h, "Invalid dimension crop for jpg image")):
+                        cropped_img = img[y1:y2, x1:x2] 
+                        name = boardname+'_'+row['refDes'].replace(':','')+'_'+str(i)+'.jpg'
+                        cv2.imwrite(os.path.join(output_dir,name), cropped_img)
 
-                    # Debug
-                    if(_DEBUG & 3):
-                        p1 = (int(x1), int(y1))
-                        p2 = (int(x2), int(y2))
-                        cv2.rectangle(img, p1,p2, fontColorSearchArea, 3)
-                        if(row['refDes']):
-                            cv2.putText(img, row['refDes'], (x1,y1-10), font, fontScale, fontColorSearchArea, lineType)
+                        # Debug
+                        if(_DEBUG & 3):
+                            p1 = (int(x1), int(y1))
+                            p2 = (int(x2), int(y2))
+                            cv2.rectangle(img, p1,p2, fontColorSearchArea, 3)
+                            if(row['refDes']):
+                                cv2.putText(img, row['refDes'], (x1,y1-10), font, fontScale, fontColorSearchArea, lineType)
+                    else:
+                        raise ValueError("Invalid crop dimension for {} {}".format(p, searchArea))
+                        sys.exit()
+                    
                 
                 if(LABEL_TOOL):
                     labelling_dirpath=os.path.join(output_dir,"LABEL_IMG")
@@ -250,46 +323,70 @@ def SaveAllComponentImagesInTile(root_dir, tile_csvpath, boardname, output_dir):
                 x1 =  bodydims[0] - searchArea[0]
                 y1 =  bodydims[1] - searchArea[1]
                 x2 =  bodydims[2] - searchArea[0]
-                y2 =  bodydims[3] - searchArea[1]   
-                line="{},{},{},{},{}".format(x1,y1,x2,y2, Label.body.value)
-                label_list.append(line)
+                y2 =  bodydims[3] - searchArea[1] 
 
-                if(_DEBUG & 3):
+                if ((x1<0) or (y1<0)or (x2<0) or (y2<0)):
+                    print ("Warning: Detected x1 <0 setting x.. =  bodydims[..]")
                     x1 =  bodydims[0]
                     y1 =  bodydims[1]
                     x2 =  bodydims[2]
-                    y2 =  bodydims[3]                
-                    centroid_x = bodydims[7]
-                    centroid_y = bodydims[8]               
-                    
-                    p1 = (int(x1), int(y1))
-                    p2 = (int(x2), int(y2))
-                    cv2.rectangle(img, p1,p2, fontColor, 3)
-                    cv2.circle(img, (centroid_x, centroid_y), 5, fontColorBody, 3) 
+                    y2 =  bodydims[3]
+                
+                if (validate_x1y1x2y2(x1, x2, y1, y2, 0, image_w, 0, image_h, "Invalid dimension for body_dims")):
+                    line="{},{},{},{},{}".format(x1,y1,x2,y2, Label.body.value)
+                    label_list.append(line)
+
+                    if(_DEBUG & 3):
+                        x1 =  bodydims[0]
+                        y1 =  bodydims[1]
+                        x2 =  bodydims[2]
+                        y2 =  bodydims[3]                
+                        centroid_x = bodydims[7]
+                        centroid_y = bodydims[8]               
+                        
+                        p1 = (int(x1), int(y1))
+                        p2 = (int(x2), int(y2))
+                        cv2.rectangle(img, p1,p2, fontColor, 3)
+                        cv2.circle(img, (centroid_x, centroid_y), 5, fontColorBody, 3) 
+                else:
+                    # raise ValueError("Invalid dimension for {} {}".format(label_path, searchArea))
+                    # sys.exit()
+                    pass
 
             # Pins dims
             if(row['pins_dims']):
                 if(pin_list):
                     for pin in pin_list:
-                        # offsetX = searchArea[4]- bodydims[7]
-                        # offsetY = searchArea[5]- bodydims[8]
-
                         x1 =  pin[0] - searchArea[0]
                         y1 =  pin[1] - searchArea[1]
                         x2 =  pin[2] - searchArea[0]
                         y2 =  pin[3] - searchArea[1]
-                        line = "{},{},{},{},{}".format(x1,y1,x2,y2,Label.pins.value)
-                        label_list.append(line)
-                        
-                        # Debug
-                        if(_DEBUG & 3):
+
+                        if ((x1<0) or (y1<0) or (x2<0) or (y2<0)):
+                            print("\tWarning: Detected x1<0, setting x.. =  pin[..] instead!")
                             x1 =  pin[0]
                             y1 =  pin[1]
                             x2 =  pin[2]
                             y2 =  pin[3]
-                            p1 = (int(x1), int(y1))
-                            p2 = (int(x2), int(y2))
-                            cv2.rectangle(img, p1,p2, fontColorPins, 3)
+
+                        if (validate_x1y1x2y2(x1, x2, y1, y2, 0, image_w, 0, image_h, "Invalid dimension for pins_dims")):
+                            
+                            line = "{},{},{},{},{}".format(x1,y1,x2,y2,Label.pins.value)
+                            label_list.append(line)
+                            
+                            # Debug
+                            if(_DEBUG & 3):
+                                x1 =  pin[0]
+                                y1 =  pin[1]
+                                x2 =  pin[2]
+                                y2 =  pin[3]
+                                p1 = (int(x1), int(y1))
+                                p2 = (int(x2), int(y2))
+                                cv2.rectangle(img, p1,p2, fontColorPins, 3)
+                        else:
+                            # raise ValueError("Invalid dimension for {} {}".format(label_path, searchArea))
+                            # sys.exit()
+                            pass
 
             #Write Labels
             name = boardname+'_'+row['refDes'].replace(':','')+'.txt'
@@ -332,8 +429,8 @@ if __name__ == '__main__':
 
 #  Extract
     parser.add_argument("--root_fpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/Boards/13-8-2019/JW/success"))
-    parser.add_argument("--boardname", default="9608_t_1_90_r")
-    parser.add_argument("--tile_csvpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/Boards/13-8-2019/JW/success/9608_t_1_90_r/output/updated_all_tiles.csv"))
+    parser.add_argument("--boardname", default="AGIH-VR-G2571-61103-panelized")
+    parser.add_argument("--tile_csvpath", default=os.path.normpath("D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/LD_Files/Boards/13-8-2019/JW/success/AGIH-VR-G2571-61103-panelized/output/updated_all_tiles.csv"))
     parser.add_argument("--output_dir", default=os.path.normpath("./LD_Files/Output_ComponentByBoard"))
 #  ExtractEnd: 
 

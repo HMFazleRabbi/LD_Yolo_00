@@ -83,6 +83,7 @@ class LabelFile(object):
         writer.save(targetFile=filename, classList=classList)
         return
 
+    
     def toggleVerify(self):
         self.verified = not self.verified
 

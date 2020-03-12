@@ -19,13 +19,15 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import core.utils as utils
 from tqdm import tqdm
-from core.dataset import Dataset, MultichannelDataset
+from core.dataset import   DatasetVitroxFormatZL, DatasetVitroxFormat #MultichannelDataset, Dataset
 from core.yolov3 import YOLOV3
 from core.config import cfg
 
 
 class YoloTrain(object):
     def __init__(self):
+        print("--> GPU (Present):{}".format(tf.test.is_gpu_available()))
+
         self.anchor_per_scale    = cfg.YOLO.ANCHOR_PER_SCALE
         self.classes             = utils.read_class_names(cfg.YOLO.CLASSES)
         self.channels            = cfg.YOLO.CHANNELS
@@ -40,14 +42,12 @@ class YoloTrain(object):
         self.moving_ave_decay    = cfg.YOLO.MOVING_AVE_DECAY
         self.max_bbox_per_scale  = 150
         self.train_logdir        = "./data/log/train"
-        # self.trainset            = Dataset('train')
-        # self.testset             = Dataset('test')
-        self.trainset            = MultichannelDataset('train')
-        self.testset             = MultichannelDataset('test')
+        self.trainset            = DatasetVitroxFormatZL('train')  #Dataset('train')  
+        self.testset             = DatasetVitroxFormat('test')   #Dataset('test')   
         self.steps_per_period    = len(self.trainset)
         self.sess                = tf.Session(config=tf.ConfigProto(
             allow_soft_placement=True,
-            # gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+            gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
             ))
 
         with tf.name_scope('define_input'):
@@ -191,7 +191,4 @@ class YoloTrain(object):
 
 
 if __name__ == '__main__': YoloTrain().train()
-
-
-
 

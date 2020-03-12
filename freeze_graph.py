@@ -15,9 +15,11 @@
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 from core.yolov3 import YOLOV3
+from core.config import cfg
+
 
 pb_file = "./yolov3_coco.pb"
-ckpt_file = "./checkpoint/yolov3_coco_demo.ckpt"
+ckpt_file = cfg.TRAIN.INITIAL_WEIGHT # "./checkpoint/yolov3_coco_demo.ckpt"
 output_node_names = ["input/input_data", "pred_sbbox/concat_2", "pred_mbbox/concat_2", "pred_lbbox/concat_2"]
 
 with tf.name_scope('input'):

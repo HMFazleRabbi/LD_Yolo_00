@@ -16,3 +16,21 @@ bin-release/
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
+LD_Files/Dataset-version_2_0/
+dataset/
+LD_Files/9611GCR2-T-7/output/16/processed_tile_16.csv
+LD_Files/9611GCR2-T-7/output/15/processed_tile_15.csv
+LD_Files/9611GCR2-T-7/output/12/processed_tile_12.txt
+checkpoint/
+LD_Files/9611GCR2-T-7/
+core/__pycache__/__init__.cpython-36.pyc
+core/__pycache__/backbone.cpython-36.pyc
+core/__pycache__/common.cpython-36.pyc
+core/__pycache__/config.cpython-36.pyc
+core/__pycache__/dataset.cpython-36.pyc
+core/__pycache__/utils.cpython-36.pyc
+core/__pycache__/yolov3.cpython-36.pyc
+data/log/events.out.tfevents.1583289073.MY16420051
+LD_Files/__pycache__/helper.cpython-36.pyc
+LD_Files/Boards/
+Output_ComponentByBoard/

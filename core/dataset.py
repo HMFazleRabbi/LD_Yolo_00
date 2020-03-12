@@ -302,59 +302,12 @@ class DatasetVitroxFormat(Dataset):
                 txt = f.read()
                 txt = txt.strip()
                 txt = txt.replace("\n", " ")
-                # if txt[-1] ==',': txt = txt[:-1]
                 txt = fname + ' ' + txt
                 if (len(txt.strip().split(',')[1:]) !=0):
                     annotations.append(txt.strip())
-        # np.random.shuffle(annotations)
+
+        np.random.shuffle(annotations)
         return annotations
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        
-        with tf.device('/cpu:0'):
-            self.train_input_size = random.choice(self.train_input_sizes)
-            self.train_output_sizes = self.train_input_size // self.strides
-
-            batch_image = np.zeros((self.batch_size, self.train_input_size, self.train_input_size, self.channels))
-
-            batch_label_sbbox = np.zeros((self.batch_size, self.train_output_sizes[0], self.train_output_sizes[0],
-                                          self.anchor_per_scale, 5 + self.num_classes))
-            batch_label_mbbox = np.zeros((self.batch_size, self.train_output_sizes[1], self.train_output_sizes[1],
-                                          self.anchor_per_scale, 5 + self.num_classes))
-            batch_label_lbbox = np.zeros((self.batch_size, self.train_output_sizes[2], self.train_output_sizes[2],
-                                          self.anchor_per_scale, 5 + self.num_classes))
-
-            batch_sbboxes = np.zeros((self.batch_size, self.max_bbox_per_scale, 4))
-            batch_mbboxes = np.zeros((self.batch_size, self.max_bbox_per_scale, 4))
-            batch_lbboxes = np.zeros((self.batch_size, self.max_bbox_per_scale, 4))
-
-            num = 0
-            if self.batch_count < self.num_batchs:
-                while num < self.batch_size:
-                    index = self.batch_count * self.batch_size + num
-                    if index >= self.num_samples: index -= self.num_samples
-                    annotation = self.annotations[index]
-                    image, bboxes = self.parse_annotation(annotation)
-                    label_sbbox, label_mbbox, label_lbbox, sbboxes, mbboxes, lbboxes = self.preprocess_true_boxes(bboxes)
-
-                    batch_image[num, :, :, :] = image
-                    batch_label_sbbox[num, :, :, :, :] = label_sbbox
-                    batch_label_mbbox[num, :, :, :, :] = label_mbbox
-                    batch_label_lbbox[num, :, :, :, :] = label_lbbox
-                    batch_sbboxes[num, :, :] = sbboxes
-                    batch_mbboxes[num, :, :] = mbboxes
-                    batch_lbboxes[num, :, :] = lbboxes
-                    num += 1
-                self.batch_count += 1
-                return batch_image, batch_label_sbbox, batch_label_mbbox, batch_label_lbbox, \
-                       batch_sbboxes, batch_mbboxes, batch_lbboxes
-            else:
-                self.batch_count = 0
-                np.random.shuffle(self.annotations)
-                raise StopIteration
 
     def parse_annotation(self, annotation):
 
@@ -366,51 +319,118 @@ class DatasetVitroxFormat(Dataset):
         image = np.array(cv2.imread(image_path))
         bboxes = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
        
-        # Converting to cx,cy,w,h format
-        bboxes_xywh = np.zeros_like(bboxes)
-        bboxes_xywh[:,0] = (bboxes[:,0] + bboxes[:,2]) //2
-        bboxes_xywh[:,1] = (bboxes[:,1] + bboxes[:,3]) //2
-        bboxes_xywh[:,2] = bboxes[:,2] - bboxes[:,0]
-        bboxes_xywh[:,3] = bboxes[:,3] - bboxes[:,1]
-        bboxes_xywh[:,4] = bboxes[:,4]
-        # bboxes_xywh=[[10, 10, 35, 35, 1]]
-        print(annotation, image_path)
-
         
         # Sanity check
-        if (bboxes_xywh.min()<0):
-            print("Error: bboxes_xywh.min()<0 ")
+        if ((bboxes.min()<0) and (bboxes[:, :-1] !=0)):
+            raise KeyError ("Error (parse_annotation(self, annotation)): bboxes.min()<0 ")
         if (bboxes[:,[0,2]].max()>image.shape[1] ):
-            print("Error: bboxes[:,[0,2]].max()>image.shape[1] ")
+            raise KeyError("Error (parse_annotation(self, annotation)): bboxes[:,[0,2]].max()>image.shape[1] ")
         if (bboxes[:,[1,3]].max()>image.shape[0] ):
-            print("Error: bboxes[:,[1,3]].max()>image.shape[0] ")
-        if (bboxes_xywh[:,[0,2]].max()>image.shape[1]): 
-            print("ERROR: Location exceed image width by",bboxes_xywh[:,2].max()-image.shape[1])
-        if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
-            print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
+            raise KeyError("Error (parse_annotation(self, annotation)): bboxes[:,[1,3]].max()>image.shape[0] ")
 
-
+        # Augmentations
         if self.data_aug:
-            image, bboxes_xywh = self.random_horizontal_flip(np.copy(image), np.copy(bboxes_xywh))
-            image, bboxes_xywh = self.random_crop(np.copy(image), np.copy(bboxes_xywh))
-            image, bboxes_xywh = self.random_translate(np.copy(image), np.copy(bboxes_xywh))
-            # print("AUG: " , bboxes_xywh)
+            image, bboxes = self.random_horizontal_flip(np.copy(image), np.copy(bboxes))
+            image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))
+            image, bboxes = self.random_translate(np.copy(image), np.copy(bboxes))
 
-
-        image, bboxes_xywh = utils.image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes_xywh))
+        # Preprocessing aka resizing
+        image, bboxes = utils.image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes))
         
-        if (bboxes_xywh.min()<0):
+        # Sanity check
+        if (bboxes.min()<0):
             if (bboxes_xywh[:,[0,2]].max()>image.shape[1]): 
                 print("ERROR: Location exceed image width by",bboxes_xywh[:,2].max()-image.shape[1])
             if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
                 print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
 
-            with  open("./Corrupted.txt", "a") as myfile:
+            with  open("./Annotation_Corrupted.txt", "a") as myfile:
                 myfile.write(annotation.split()[0])
                 myfile.write("\n")
             # raise KeyError("Error: Mismatched dimension! ", bboxes_xywh)
             
-        return image, bboxes_xywh
+        return image, bboxes
+
+class DatasetVitroxFormatZL(DatasetVitroxFormat):
+    
+    
+    def load_annotations(self, dataset_type):
+        pattern = os.path.join(os.path.normpath(self.annot_path), "*.txt")
+        txt_flist = glob.glob(pattern)
+
+        annotations=[]
+        for fname in txt_flist:
+            with open(fname, 'r') as f:
+                txt = f.read()
+                txt = txt.replace(" ", ",")
+                txt = txt.replace("\n", " ")
+                txt = fname + ' ' + txt
+                if (len(txt.strip().split(',')[1:]) !=0):
+                    annotations.append(txt.strip())
+
+        #np.random.shuffle(annotations)
+        return annotations
+    
+    def bodylead_lbl_parser(self, x):
+        if (x.upper() == "BODY"): 
+            return 0
+        elif (x.upper() == "PIN" or x.upper() == "PINS"):
+             return 1
+        else:
+            return int(float(x))
+
+
+    def parse_annotation(self, annotation):
+
+        line = annotation.split()
+        image_path = line[0]
+        image_path = image_path[:-4] + ".jpg"
+        if not os.path.exists(image_path):
+            raise KeyError("%s does not exist ... " %image_path)
+        image = np.array(cv2.imread(image_path))
+        
+        # print(line, image_path)
+        bboxes = np.array([list(map(self.bodylead_lbl_parser, box.split(','))) for box in line[1:]])
+        bboxes[:, [2,3]]=bboxes[:, [0,1]] + bboxes[:, [2,3]]
+
+        # Sanity check
+        if ((bboxes.min()<0)  and (bboxes[:, :-1] !=0)):
+            raise KeyError ("Error (parse_annotation(self, annotation)): bboxes.min()<0 ")
+        if (bboxes[:,[0,2]].max()>image.shape[1] ):
+            raise KeyError("Error (parse_annotation(self, annotation)): bboxes[:,[0,2]].max()>image.shape[1] ")
+        if (bboxes[:,[1,3]].max()>image.shape[0] ):
+            raise KeyError("Error (parse_annotation(self, annotation)): bboxes[:,[1,3]].max()>image.shape[0] ")
+        if (len(bboxes[bboxes[:, 4]==0]) > 1):
+            raise KeyError("Error (parse_annotation(self, annotation)): len(bboxes[bboxes[:, 4]==0]) > 1")
+        if (len(bboxes[bboxes[:, 4]==0]) == 0):
+            with  open("./Annotation_Corrupted.txt", "a") as myfile:
+                print(line, image_path)
+                myfile.write(annotation.split()[0])
+                myfile.write("\n")
+            # raise KeyError("Error (parse_annotation(self, annotation)): len(bboxes[bboxes[:, 4]==0]) != 0 ")
+
+        # Augmentations
+        if self.data_aug:
+            image, bboxes = self.random_horizontal_flip(np.copy(image), np.copy(bboxes))
+            image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))
+            image, bboxes = self.random_translate(np.copy(image), np.copy(bboxes))
+
+        # Preprocessing aka resizing
+        image, bboxes = utils.image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes))
+        
+        # Sanity check
+        if (bboxes.min()<0):
+            if (bboxes_xywh[:,[0,2]].max()>image.shape[1]): 
+                print("ERROR: Location exceed image width by",bboxes_xywh[:,2].max()-image.shape[1])
+            if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
+                print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
+
+            with  open("./Annotation_Corrupted.txt", "a") as myfile:
+                myfile.write(annotation.split()[0])
+                myfile.write("\n")
+            # raise KeyError("Error: Mismatched dimension! ", bboxes_xywh)
+            
+        return image, bboxes
 
 
 class MultichannelDataset(Dataset):
@@ -450,9 +470,9 @@ class MultichannelDataset(Dataset):
         
 
 if __name__ == "__main__":
-    testset             = Dataset('test')
+    # testset             = Dataset('test')
     # trainset            = MultichannelDataset('train')
-    mydataset = DatasetVitroxFormat('train')
+    mydataset = DatasetVitroxFormatZL('train')
     for i, _ in enumerate(mydataset):
         print(i)
     pass        

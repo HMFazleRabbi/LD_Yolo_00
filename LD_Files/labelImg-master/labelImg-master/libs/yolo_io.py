@@ -84,9 +84,8 @@ class YOLOWriter:
 
         for box in self.boxlist:
             xmin, ymin, w, h, className = self.BndBox2YoloLine(box, classList)
-            # print (classIndex, xcen, ycen, w, h)
             className = className.replace("\r\n","").replace("\n","")
-            out_file.write("%d,%d,%d,%d,%s\n" % (xmin, ymin, w, h, className))
+            out_file.write("%d,%d,%d,%d,%s\n" % (xmin, ymin, xmin + w, ymin + h, className))
 
         # print (classList)
         # print (out_class_file)
@@ -126,6 +125,65 @@ class YOLOWriter:
         # out_class_file.close()
         # out_file.close()
 
+    def save_x1y1wh_format(self, classList=[], targetFile=None):
+        out_file = None #Update yolo .txt
+        out_class_file = None   #Update class list .txt
+
+        if targetFile is None:
+            out_file = open(
+            self.filename + TXT_EXT, 'w', encoding=ENCODE_METHOD)
+            classesFile = os.path.join(os.path.dirname(os.path.abspath(self.filename)), "classes.txt")
+            out_class_file = open(classesFile, 'w')
+
+        else:
+            out_file = codecs.open(targetFile, 'w', encoding=ENCODE_METHOD)
+            classesFile = os.path.join(os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
+            out_class_file = open(classesFile, 'w')
+
+
+        for box in self.boxlist:
+            xmin, ymin, w, h, className = self.BndBox2YoloLine(box, classList)
+            # print (classIndex, xcen, ycen, w, h)
+            className = className.replace("\r\n","").replace("\n","")
+            out_file.write("%d,%d,%d,%d,%s\n" % (xmin, ymin, w, h, className))
+
+        # print (classList)
+        # print (out_class_file)
+        for c in classList:
+            out_class_file.write(c+'\n')
+
+        out_class_file.close()
+        out_file.close()
+
+
+    # This is Yolo Model
+    # out_file = None #Update yolo .txt
+    # out_class_file = None   #Update class list .txt
+
+    # if targetFile is None:
+    #     out_file = open(
+    #     self.filename + TXT_EXT, 'w', encoding=ENCODE_METHOD)
+    #     classesFile = os.path.join(os.path.dirname(os.path.abspath(self.filename)), "classes.txt")
+    #     out_class_file = open(classesFile, 'w')
+
+    # else:
+    #     out_file = codecs.open(targetFile, 'w', encoding=ENCODE_METHOD)
+    #     classesFile = os.path.join(os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
+    #     out_class_file = open(classesFile, 'w')
+
+
+    # for box in self.boxlist:
+    #     classIndex, xcen, ycen, w, h = self.BndBox2YoloLine(box, classList)
+    #     # print (classIndex, xcen, ycen, w, h)
+    #     out_file.write("%d %.6f %.6f %.6f %.6f\n" % (classIndex, xcen, ycen, w, h))
+
+    # # print (classList)
+    # # print (out_class_file)
+    # for c in classList:
+    #     out_class_file.write(c+'\n')
+
+    # out_class_file.close()
+    # out_file.close()
 
 
 class YoloReader:
@@ -156,7 +214,7 @@ class YoloReader:
 
         self.verified = False
         # try:
-        self.parseYoloFormat()
+        self.parseLeadDetectorFormat()
         # except:
             # pass
 
@@ -211,3 +269,12 @@ class YoloReader:
 
         #     # Caveat: difficult flag is discarded when saved as yolo format.
         #     self.addShape(label, xmin, ymin, xmax, ymax, False)
+
+
+    def parseLeadDetectorFormat(self):
+        bndBoxFile = open(self.filepath, 'r')
+        print(self.filepath)
+        for bndBox in bndBoxFile:
+            x1, y1, x2, y2, label = bndBox.split(',')
+            # Caveat: difficult flag is discarded when saved as yolo format.
+            self.addShape(label, int(x1), int(y1), int(x2), int(y2), False)
