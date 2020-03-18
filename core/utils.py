@@ -12,7 +12,7 @@
 #================================================================
 
 import cv2
-import random, datetime
+import random, datetime, os
 import colorsys
 import numpy as np
 import tensorflow.compat.v1 as tf
@@ -58,17 +58,19 @@ def image_preporcess(image, target_size, gt_boxes=None):
         gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
         gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
 
-        # if (random.randint(0,1000) > -1): # 990):
-        if (random.randint(0,1000) > 990):
-            draw_box_pts = np.zeros(shape = (gt_boxes.shape[0], 6))
-            draw_box_pts[:,0] = gt_boxes[:, 0]
-            draw_box_pts[:,2] = gt_boxes[:, 2]
-            draw_box_pts[:,1] = gt_boxes[:, 1]
-            draw_box_pts[:,3] = gt_boxes[:, 3]
-            draw_box_pts[:,5] = gt_boxes[:, 4] 
-            draw_bbox(image_paded, draw_box_pts, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True)
-            name= "D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/dataset/Sample_Visualization/" + str(datetime.datetime.now()).replace(".","_").replace(":","_").replace(" ","_") +".jpg"
-            cv2.imwrite(name,image_paded *255)
+        # if (random.randint(0,1000) > 990):
+        #         sample_dir = os.path.normpath("./data/log/SampleImages")
+        #     if not os.path.exists(sample_dir):
+        #         os.mkdir(sample_dir)
+        #     draw_box_pts = np.zeros(shape = (gt_boxes.shape[0], 6))
+        #     draw_box_pts[:,0] = gt_boxes[:, 0]
+        #     draw_box_pts[:,2] = gt_boxes[:, 2]
+        #     draw_box_pts[:,1] = gt_boxes[:, 1]
+        #     draw_box_pts[:,3] = gt_boxes[:, 3]
+        #     draw_box_pts[:,5] = gt_boxes[:, 4] 
+        #     draw_bbox(image_paded, draw_box_pts, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True)
+        #     name= os.path.join (sample_dir , str(datetime.datetime.now()).replace(".","_").replace(":","_").replace(" ","_") +".jpg")
+        #     cv2.imwrite(name,image_paded *255)
         return image_paded, gt_boxes
 
 def draw_bbox(image, bboxes, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True):
@@ -106,8 +108,6 @@ def draw_bbox(image, bboxes, classes=read_class_names(cfg.YOLO.CLASSES), show_la
 
     return image
 
-
-
 def bboxes_iou(boxes1, boxes2):
 
     boxes1 = np.array(boxes1)
@@ -126,8 +126,6 @@ def bboxes_iou(boxes1, boxes2):
 
     return ious
 
-
-
 def read_pb_return_tensors(graph, pb_file, return_elements):
 
     with tf.gfile.FastGFile(pb_file, 'rb') as f:
@@ -138,7 +136,6 @@ def read_pb_return_tensors(graph, pb_file, return_elements):
         return_elements = tf.import_graph_def(frozen_graph_def,
                                               return_elements=return_elements)
     return return_elements
-
 
 def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
     """
@@ -176,7 +173,6 @@ def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
             cls_bboxes = cls_bboxes[score_mask]
 
     return best_bboxes
-
 
 def postprocess_boxes(pred_bbox, org_img_shape, input_size, score_threshold):
 
@@ -218,6 +214,70 @@ def postprocess_boxes(pred_bbox, org_img_shape, input_size, score_threshold):
     coors, scores, classes = pred_coor[mask], scores[mask], classes[mask]
 
     return np.concatenate([coors, scores[:, np.newaxis], classes[:, np.newaxis]], axis=-1)
+
+
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : A class created to hold different pre and post  processing.
+#   Date Modified: 20200318_2013
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
+class ObjectDetectionUtility:
+
+    _instance = None
+
+    @staticmethod 
+    def getInstance():
+        """ Static access method. """
+        if Singleton.__instance == None:
+            Singleton()
+        return Singleton.__instance
+
+    def __init__(self):
+        """ Virtually private constructor. """
+        if ObjectDetectionUtility.__instance != None:
+            raise Exception("Attempting to create a  object from singleton class!")
+        else:
+            Singleton.__instance = self
+            
+    def image_preporcess(image, target_size, gt_boxes=None):
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+
+        ih, iw    = target_size
+        h,  w, c  = image.shape
+
+        scale = min(iw/w, ih/h)
+        nw, nh  = int(scale * w), int(scale * h)
+        image_resized = cv2.resize(image, (nw, nh))
+
+        image_paded = np.full(shape=[ih, iw, 3], fill_value=128.0)
+        dw, dh = (iw - nw) // 2, (ih-nh) // 2
+        image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
+        image_paded = image_paded / 255.
+
+        if gt_boxes is None:
+            return image_paded
+
+        else:
+            gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
+            gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
+
+            # if (random.randint(0,1000) > -1): # 990):
+            if (random.randint(0,1000) > 990):
+                sample_dir = os.path.normpath("./data/log/SampleImages")
+                if not os.path.exists(sample_dir):
+                    os.mkdir(sample_dir)
+                draw_box_pts = np.zeros(shape = (gt_boxes.shape[0], 6))
+                draw_box_pts[:,0] = gt_boxes[:, 0]
+                draw_box_pts[:,2] = gt_boxes[:, 2]
+                draw_box_pts[:,1] = gt_boxes[:, 1]
+                draw_box_pts[:,3] = gt_boxes[:, 3]
+                draw_box_pts[:,5] = gt_boxes[:, 4] 
+                draw_bbox(image_paded, draw_box_pts, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True)
+                name= os.path.join (sample_dir , str(datetime.datetime.now()).replace(".","_").replace(":","_").replace(" ","_") +".jpg")
+                cv2.imwrite(name,image_paded *255)
+            return image_paded, gt_boxes
 
 
 

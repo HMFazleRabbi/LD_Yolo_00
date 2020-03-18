@@ -20,17 +20,15 @@ tf.disable_v2_behavior()
 import core.utils as utils
 from core.config import cfg
 
-
-def CornerToCenterBBoxConverter(box):
-    xmin = box[0]
-    xmax = box[2]
-    ymin = box[1]
-    ymax = box[3]
-    box[0] = (xmax + xmin) //2
-    box[1] = (ymax + ymin) //2
-    box[2] = xmax - xmin
-    box[3] = ymax - ymin
-
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Data loader for the yolo. This is the original
+#   one from the repo. New dataset aka dataloaders should inherit 
+#   from this class. Use cauttion while inheriting. Check to see
+#   whether you need to call the parent constructor.
+#   Date Modified: 
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
 class Dataset(object):
     """implement Dataset here"""
     def __init__(self, dataset_type):
@@ -269,7 +267,14 @@ class Dataset(object):
         return self.num_batchs
 
 
-class DatasetVitroxFormat(Dataset):
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Dataset loader created to support the x1y1x2y2
+#   coordinate system and the fetching and loading the RGB image only.
+#   Date Modified: 20200318_2313
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
+class Dataset_LD_RGB (Dataset):
     
     """ Dataloader in vitrox OD supported format """
     def __init__(self, dataset_type):
@@ -278,19 +283,19 @@ class DatasetVitroxFormat(Dataset):
         self.batch_size  = cfg.TRAIN.BATCH_SIZE if dataset_type == 'train' else cfg.TEST.BATCH_SIZE
         self.data_aug    = cfg.TRAIN.DATA_AUG   if dataset_type == 'train' else cfg.TEST.DATA_AUG
 
-        self.train_input_sizes = cfg.TRAIN.INPUT_SIZE
-        self.strides = np.array(cfg.YOLO.STRIDES)
-        self.classes = utils.read_class_names(cfg.YOLO.CLASSES)
-        self.num_classes = len(self.classes)
-        self.channels    = cfg.YOLO.CHANNELS
-        self.anchors = np.array(utils.get_anchors(cfg.YOLO.ANCHORS))
-        self.anchor_per_scale = cfg.YOLO.ANCHOR_PER_SCALE
+        self.train_input_sizes  = cfg.TRAIN.INPUT_SIZE
+        self.strides            = np.array(cfg.YOLO.STRIDES)
+        self.classes            = utils.read_class_names(cfg.YOLO.CLASSES)
+        self.num_classes        = len(self.classes)
+        self.channels           = cfg.YOLO.CHANNELS
+        self.anchors            = np.array(utils.get_anchors(cfg.YOLO.ANCHORS))
+        self.anchor_per_scale   = cfg.YOLO.ANCHOR_PER_SCALE
         self.max_bbox_per_scale = 150
 
-        self.annotations = self.load_annotations(dataset_type)
-        self.num_samples = len(self.annotations)
-        self.num_batchs = int(np.ceil(self.num_samples / self.batch_size))
-        self.batch_count = 0
+        self.annotations    = self.load_annotations(dataset_type)
+        self.num_samples    = len(self.annotations)
+        self.num_batchs     = int(np.ceil(self.num_samples / self.batch_size))
+        self.batch_count    = 0
 
     def load_annotations(self, dataset_type):
         pattern = os.path.join(os.path.normpath(self.annot_path), "*.txt")
@@ -335,7 +340,7 @@ class DatasetVitroxFormat(Dataset):
             image, bboxes = self.random_translate(np.copy(image), np.copy(bboxes))
 
         # Preprocessing aka resizing
-        image, bboxes = utils.image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes))
+        image, bboxes = utils.ObjectDetectionUtility.getInstance().image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes))
         
         # Sanity check
         if (bboxes.min()<0):
@@ -344,15 +349,44 @@ class DatasetVitroxFormat(Dataset):
             if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
                 print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
 
-            with  open("./Annotation_Corrupted.txt", "a") as myfile:
+            with  open("./data/log/DatabaseParsing_Error.txt", "a")  as myfile:
                 myfile.write(annotation.split()[0])
                 myfile.write("\n")
             # raise KeyError("Error: Mismatched dimension! ", bboxes_xywh)
             
         return image, bboxes
 
-class DatasetVitroxFormatZL(DatasetVitroxFormat):
-    
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Special dataset created to read ZL database 
+#   The reason is the coordinate system it was using is x1y1,w,h
+#   and it uses the label "pin"/"lead"
+#   Date Modified: 20200318_2320
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
+class Dataset_LD_ZL (Dataset):
+
+    """ Dataloader in vitrox OD supported format """
+    def __init__(self, dataset_type):
+        self.annot_path  = cfg.TRAIN.ANNOT_PATH if dataset_type == 'train' else cfg.TEST.ANNOT_PATH
+        self.input_sizes = cfg.TRAIN.INPUT_SIZE if dataset_type == 'train' else cfg.TEST.INPUT_SIZE
+        self.batch_size  = cfg.TRAIN.BATCH_SIZE if dataset_type == 'train' else cfg.TEST.BATCH_SIZE
+        self.data_aug    = cfg.TRAIN.DATA_AUG   if dataset_type == 'train' else cfg.TEST.DATA_AUG
+
+        self.train_input_sizes  = cfg.TRAIN.INPUT_SIZE
+        self.strides            = np.array(cfg.YOLO.STRIDES)
+        self.classes            = utils.read_class_names(cfg.YOLO.CLASSES)
+        self.num_classes        = len(self.classes)
+        self.channels           = cfg.YOLO.CHANNELS
+        self.anchors            = np.array(utils.get_anchors(cfg.YOLO.ANCHORS))
+        self.anchor_per_scale   = cfg.YOLO.ANCHOR_PER_SCALE
+        self.max_bbox_per_scale = 150
+
+        self.annotations    = self.load_annotations(dataset_type)
+        self.num_samples    = len(self.annotations)
+        self.num_batchs     = int(np.ceil(self.num_samples / self.batch_size))
+        self.batch_count    = 0
+
     
     def load_annotations(self, dataset_type):
         pattern = os.path.join(os.path.normpath(self.annot_path), "*.txt")
@@ -368,7 +402,7 @@ class DatasetVitroxFormatZL(DatasetVitroxFormat):
                 if (len(txt.strip().split(',')[1:]) !=0):
                     annotations.append(txt.strip())
 
-        #np.random.shuffle(annotations)
+        np.random.shuffle(annotations)
         return annotations
     
     def bodylead_lbl_parser(self, x):
@@ -403,7 +437,7 @@ class DatasetVitroxFormatZL(DatasetVitroxFormat):
         if (len(bboxes[bboxes[:, 4]==0]) > 1):
             raise KeyError("Error (parse_annotation(self, annotation)): len(bboxes[bboxes[:, 4]==0]) > 1")
         if (len(bboxes[bboxes[:, 4]==0]) == 0):
-            with  open("./Annotation_Corrupted.txt", "a") as myfile:
+            with  open("./data/log/DatabaseParsing_Error.txt", "a") as myfile:
                 print(line, image_path)
                 myfile.write(annotation.split()[0])
                 myfile.write("\n")
@@ -425,7 +459,7 @@ class DatasetVitroxFormatZL(DatasetVitroxFormat):
             if (bboxes_xywh[:,[1,3]].max()>image.shape[0] ):
                 print("ERROR: Location exceed image height by",bboxes_xywh[:,3].max()-image.shape[0])
 
-            with  open("./Annotation_Corrupted.txt", "a") as myfile:
+            with  open("./data/log/DatabaseParsing_Error.txt", "a") as myfile:
                 myfile.write(annotation.split()[0])
                 myfile.write("\n")
             # raise KeyError("Error: Mismatched dimension! ", bboxes_xywh)
@@ -470,9 +504,8 @@ class MultichannelDataset(Dataset):
         
 
 if __name__ == "__main__":
-    # testset             = Dataset('test')
-    # trainset            = MultichannelDataset('train')
-    mydataset = DatasetVitroxFormatZL('train')
+    
+    mydataset = Dataset_LD_ZL('train')
     for i, _ in enumerate(mydataset):
         print(i)
     pass        

@@ -20,14 +20,24 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import core.utils as utils
 from tqdm import tqdm
+
+# User define libraries
 from core.dataset import   DatasetVitroxFormatZL, DatasetVitroxFormat #MultichannelDataset, Dataset
 from core.yolov3 import YOLOV3
 from core.config import cfg
 
-
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Class containing al the function parameter and the 
+#   training funnction, Dataset loader, config loader .
+#   - All paths are relative to the root directory which is the directory
+#   in which the the train.py is situated. 
+#   Date Modified: 20200318_1221
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
 class YoloTrain(object):
     def __init__(self):
-        print("--> GPU (Present):{}".format(tf.test.is_gpu_available()))
+        print("Call YoloTrain Constructor\n--> GPU (Present):{}".format(tf.test.is_gpu_available()))
 
         self.anchor_per_scale    = cfg.YOLO.ANCHOR_PER_SCALE
         self.classes             = utils.read_class_names(cfg.YOLO.CLASSES)
@@ -43,8 +53,8 @@ class YoloTrain(object):
         self.moving_ave_decay    = cfg.YOLO.MOVING_AVE_DECAY
         self.max_bbox_per_scale  = 150
         self.train_logdir        = "./data/log/train"
-        self.trainset            = DatasetVitroxFormatZL('train')  #Dataset('train')  
-        self.testset             = DatasetVitroxFormat('test')   #Dataset('test')   
+        self.trainset            = DatasetVitroxFormatZL('train')   #Dataset('train')  
+        self.testset             = DatasetVitroxFormat('test')      #Dataset('test')   
         self.steps_per_period    = len(self.trainset)
         self.sess                = tf.Session(config=tf.ConfigProto(
             allow_soft_placement=False,

@@ -19,8 +19,8 @@ from PIL import Image
 
 return_elements = ["input/input_data:0", "pred_sbbox/concat_2:0", "pred_mbbox/concat_2:0", "pred_lbbox/concat_2:0"]
 pb_file         = "./yolov3_coco.pb"
-image_path      = "C:/Users/V510/Desktop/Fazle/IMG_20200302_135849.jpg"
-num_classes     = 80
+image_path      = "D:/FZ_WS/JyNB/Yolo_LD/LD_Files/Dataset-version_2_0/RGB/img/73-12012-22_A0_TOP_JMX_90_180_u3j.jpg"
+num_classes     = 2 #80
 input_size      = 416
 graph           = tf.Graph()
 

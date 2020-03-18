@@ -171,6 +171,7 @@ class YoloLDTest(YoloTest):
         txt_flist = glob.glob(pattern)
 
         annotations=[]
+
         for fname in txt_flist:
             with open(fname, 'r') as f:
                 txt = f.read()
@@ -201,7 +202,7 @@ class YoloLDTest(YoloTest):
                 raise KeyError("%s does not exist ... " %image_path)
             image = np.array(cv2.imread(image_path))
             bbox_data_gt = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
-            print("ANNOTATION:\t", annotation)
+            
 
             if len(bbox_data_gt) == 0:
                 bboxes_gt=[]
@@ -241,8 +242,172 @@ class YoloLDTest(YoloTest):
                     f.write(bbox_mess)
                     print('\t' + str(bbox_mess).strip())
 
+    def bodylead_lbl_parser(self, x):
+        if (x.upper() == "BODY"): 
+            return 0
+        elif (x.upper() == "PIN" or x.upper() == "PINS"):
+             return 1
+        else:
+            return int(float(x))
+
+    def evaluate_zl(self):
+            predicted_dir_path = './mAP/predicted'
+            ground_truth_dir_path = './mAP/ground-truth'
+            if os.path.exists(predicted_dir_path): shutil.rmtree(predicted_dir_path)
+            if os.path.exists(ground_truth_dir_path): shutil.rmtree(ground_truth_dir_path)
+            if os.path.exists(self.write_image_path): shutil.rmtree(self.write_image_path)
+            os.mkdir(predicted_dir_path)
+            os.mkdir(ground_truth_dir_path)
+            os.mkdir(self.write_image_path)
+
+
+            for num, annotation in enumerate(self.annotations):
+                line = annotation.split()
+                image_path = line[0]
+                image_path = image_path[:-4] + ".jpg"
+                if not os.path.exists(image_path):
+                    raise KeyError("%s does not exist ... " %image_path)
+                image = np.array(cv2.imread(image_path))
+                # bbox_data_gt = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
+                bbox_data_gt = np.array([list(map(self.bodylead_lbl_parser, box.split(','))) for box in line[1:]])
+                bbox_data_gt[:, [2,3]]=bbox_data_gt[:, [0,1]] + bbox_data_gt[:, [2,3]]
+
+                if len(bbox_data_gt) == 0:
+                    bboxes_gt=[]
+                    classes_gt=[]
+                else:
+                    bboxes_gt, classes_gt = bbox_data_gt[:, :4], bbox_data_gt[:, 4]
+                ground_truth_path = os.path.join(ground_truth_dir_path, str(num) + '.txt')
+
+                image_name = os.path.split(image_path)[1]
+                print('=> ground truth of %s:' % image_name)
+                num_bbox_gt = len(bboxes_gt)
+                with open(ground_truth_path, 'w') as f:
+                    for i in range(num_bbox_gt):
+                        class_name = self.classes[classes_gt[i]]
+                        xmin, ymin, xmax, ymax = list(map(str, bboxes_gt[i]))
+                        bbox_mess = ' '.join([class_name, xmin, ymin, xmax, ymax]) + '\n'
+                        f.write(bbox_mess)
+                        print('\t' + str(bbox_mess).strip())
+                print('=> predict result of %s:' % image_name)
+                predict_result_path = os.path.join(predicted_dir_path, str(num) + '.txt')
+                bboxes_pr = self.predict(image)
+
+                # Writer
+                if self.write_image:
+                    image = utils.draw_bbox(image, bboxes_pr, show_label=self.show_label)
+                    cv2.imwrite(self.write_image_path+image_name, image)
+
+                with open(predict_result_path, 'w') as f:
+                    for bbox in bboxes_pr:
+                        coor = np.array(bbox[:4], dtype=np.int32)
+                        score = bbox[4]
+                        class_ind = int(bbox[5])
+                        class_name = self.classes[class_ind]
+                        score = '%.4f' % score
+                        xmin, ymin, xmax, ymax = list(map(str, coor))
+                        bbox_mess = ' '.join([class_name, score, xmin, ymin, xmax, ymax]) + '\n'
+                        f.write(bbox_mess)
+                        print('\t' + str(bbox_mess).strip())
+
+
+class YoloLDTestZL(YoloTest):
+
+    def __init__(self):
+        super().__init__()
+        self.annotations = self.load_annotations()
+
+
+    
+    def load_annotations(self):
+        pattern = os.path.join(os.path.normpath(self.annotation_path), "*.txt")
+        txt_flist = glob.glob(pattern)
+
+        annotations=[]
+        for fname in txt_flist:
+            with open(fname, 'r') as f:
+                txt = f.read()
+                txt = txt.replace(" ", ",")
+                txt = txt.replace("\n", " ")
+                txt = fname + ' ' + txt
+                if (len(txt.strip().split(',')[1:]) !=0):
+                    annotations.append(txt.strip())
+
+        #np.random.shuffle(annotations)
+        return annotations
+    
+    def bodylead_lbl_parser(self, x):
+        if (x.upper() == "BODY"): 
+            return 0
+        elif (x.upper() == "PIN" or x.upper() == "PINS"):
+             return 1
+        else:
+            return int(float(x))
+
+
+    def evaluate(self):
+            predicted_dir_path = './mAP/predicted'
+            ground_truth_dir_path = './mAP/ground-truth'
+            if os.path.exists(predicted_dir_path): shutil.rmtree(predicted_dir_path)
+            if os.path.exists(ground_truth_dir_path): shutil.rmtree(ground_truth_dir_path)
+            if os.path.exists(self.write_image_path): shutil.rmtree(self.write_image_path)
+            os.mkdir(predicted_dir_path)
+            os.mkdir(ground_truth_dir_path)
+            os.mkdir(self.write_image_path)
+
+
+            for num, annotation in enumerate(self.annotations):
+                line = annotation.split()
+                image_path = line[0]
+                image_path = image_path[:-4] + ".jpg"
+                if not os.path.exists(image_path):
+                    raise KeyError("%s does not exist ... " %image_path)
+                image = np.array(cv2.imread(image_path))
+                # bbox_data_gt = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
+                bbox_data_gt = np.array([list(map(self.bodylead_lbl_parser, box.split(','))) for box in line[1:]])
+                bbox_data_gt[:, [2,3]]=bbox_data_gt[:, [0,1]] + bbox_data_gt[:, [2,3]]
+
+                if len(bbox_data_gt) == 0:
+                    bboxes_gt=[]
+                    classes_gt=[]
+                else:
+                    bboxes_gt, classes_gt = bbox_data_gt[:, :4], bbox_data_gt[:, 4]
+                ground_truth_path = os.path.join(ground_truth_dir_path, str(num) + '.txt')
+
+                image_name = os.path.split(image_path)[1]
+                print('=> ground truth of %s:' % image_name)
+                num_bbox_gt = len(bboxes_gt)
+                with open(ground_truth_path, 'w') as f:
+                    for i in range(num_bbox_gt):
+                        class_name = self.classes[classes_gt[i]]
+                        xmin, ymin, xmax, ymax = list(map(str, bboxes_gt[i]))
+                        bbox_mess = ' '.join([class_name, xmin, ymin, xmax, ymax]) + '\n'
+                        f.write(bbox_mess)
+                        print('\t' + str(bbox_mess).strip())
+                print('=> predict result of %s:' % image_name)
+                predict_result_path = os.path.join(predicted_dir_path, str(num) + '.txt')
+                bboxes_pr = self.predict(image)
+
+                # Writer
+                if self.write_image:
+                    image = utils.draw_bbox(image, bboxes_pr, show_label=self.show_label)
+                    cv2.imwrite(self.write_image_path+image_name, image)
+
+                with open(predict_result_path, 'w') as f:
+                    for bbox in bboxes_pr:
+                        coor = np.array(bbox[:4], dtype=np.int32)
+                        score = bbox[4]
+                        class_ind = int(bbox[5])
+                        class_name = self.classes[class_ind]
+                        score = '%.4f' % score
+                        xmin, ymin, xmax, ymax = list(map(str, coor))
+                        bbox_mess = ' '.join([class_name, score, xmin, ymin, xmax, ymax]) + '\n'
+                        f.write(bbox_mess)
+                        print('\t' + str(bbox_mess).strip())
+
+
 if __name__ == '__main__': 
-    YoloLDTest().evaluate()
+    YoloLDTestZL().evaluate()
 
 
 

@@ -21,7 +21,6 @@ def darknet53(input_data, trainable):
     with tf.variable_scope('darknet'):
 
         # Support for more than 3 channels dropped 20200309_1559@Fazle
-        # input_data = common.convolutional(input_data, filters_shape=(3, 3,  6,  32), trainable=trainable, name='conv0')
         input_data = common.convolutional(input_data, filters_shape=(3, 3,  3,  32), trainable=trainable, name='conv0')
         input_data = common.convolutional(input_data, filters_shape=(3, 3, 32,  64),
                                           trainable=trainable, name='conv1', downsample=True)

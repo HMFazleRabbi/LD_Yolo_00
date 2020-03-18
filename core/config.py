@@ -36,32 +36,31 @@ __C.YOLO.DEMO_WEIGHT            = "./checkpoint/Pretrained_weights/Yolov3_Coco_P
 
 # Train options
 __C.TRAIN                       = edict()
-__C.TRAIN.ANNOT_PATH            = "D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/dataset/LD_Dataset_00/train_ZL"
-__C.TRAIN.BATCH_SIZE            = 1 # 6
-__C.TRAIN.INPUT_SIZE            = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608] # [320, 352, 384, 416, 448, 480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800, 832, 864, 896, 928, 960, 992]
+__C.TRAIN.ANNOT_PATH            = "./dataset/LD_Dataset_01_RGB/train"
+__C.TRAIN.BATCH_SIZE            = 1 
+__C.TRAIN.INPUT_SIZE            = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
 __C.TRAIN.DATA_AUG              = True
 __C.TRAIN.LEARN_RATE_INIT       = 1e-4
 __C.TRAIN.LEARN_RATE_END        = 1e-6
 __C.TRAIN.WARMUP_EPOCHS         = 2  #2
-__C.TRAIN.FISRT_STAGE_EPOCHS    = 3  #20
-__C.TRAIN.SECOND_STAGE_EPOCHS   = 20 #30
-__C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_weights/Yolov3_Coco_Pretrained.ckpt" #"D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/checkpoint/ActiveCheckpoint/yolov3_test_loss=61.6875.ckpt-13" #"./checkpoint/Pretrained_weights/Yolov3_Coco_Pretrained.ckpt"  # "./checkpoint/yolov3_coco_demo.ckpt" #"D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/checkpoint/ActiveCheckpoint/yolov3_test_loss=66.6051.ckpt-18" #"./checkpoint/yolov3_coco_demo.ckpt"
+__C.TRAIN.FISRT_STAGE_EPOCHS    = 10 #20
+__C.TRAIN.SECOND_STAGE_EPOCHS   = 30 #30
+__C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_weights/Yolov3_Coco_Pretrained.ckpt" 
 
 
 
 # TEST options
 __C.TEST                        = edict()
-
-__C.TEST.ANNOT_PATH             = "D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/dataset/LD_Dataset_00/train" # "./data/dataset/voc_test.txt"
+__C.TEST.ANNOT_PATH             = "./dataset/LD_Dataset_01_RGB/test" 
 __C.TEST.BATCH_SIZE             = 1 #2
 __C.TEST.INPUT_SIZE             = 544
 __C.TEST.DATA_AUG               = False
 __C.TEST.WRITE_IMAGE            = True
-__C.TEST.WRITE_IMAGE_PATH       = "./data/detection/"
+__C.TEST.WRITE_IMAGE_PATH       = "./data/detection"
 __C.TEST.WRITE_IMAGE_SHOW_LABEL = True
-__C.TEST.WEIGHT_FILE            = "D:/FZ_WS/JyNB/Yolo_LD/tf_yolov3/checkpoint/ActiveCheckpoint/yolov3_test_loss=66.6051.ckpt-18"
+__C.TEST.WEIGHT_FILE            = "./checkpoint/ActiveCheckpoint/yolov3_test_loss=169.9338.ckpt-17"
 __C.TEST.SHOW_LABEL             = True
-__C.TEST.SCORE_THRESHOLD        = 0.3
+__C.TEST.SCORE_THRESHOLD        = 0.75
 __C.TEST.IOU_THRESHOLD          = 0.45
 
 
