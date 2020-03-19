@@ -227,12 +227,15 @@ class ObjectDetectionUtility:
         else:
             Singleton.__instance = self
             
-    def image_preporcess(image, target_size, gt_boxes=None):
+    def image_preporcess(image, target_size, gt_boxes=None, skip_resize=False):
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
 
-        ih, iw    = target_size
         h,  w, c  = image.shape
+        if not skip_resize:
+            ih, iw    = target_size
+        else:
+            ih, iw    = h, w
 
         scale = min(iw/w, ih/h)
         nw, nh  = int(scale * w), int(scale * h)
@@ -265,7 +268,6 @@ class ObjectDetectionUtility:
                 name= os.path.join (sample_dir , str(datetime.datetime.now()).replace(".","_").replace(":","_").replace(" ","_") +".jpg")
                 cv2.imwrite(name,image_paded *255)
             return image_paded, gt_boxes
-
 
 
 # /* Multichannels Support*/

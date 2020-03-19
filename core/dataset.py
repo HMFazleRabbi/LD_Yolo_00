@@ -340,7 +340,7 @@ class Dataset_LD_RGB (Dataset):
             image, bboxes = self.random_translate(np.copy(image), np.copy(bboxes))
 
         # Preprocessing aka resizing
-        image, bboxes = utils.ObjectDetectionUtility.getInstance().image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes))
+        image, bboxes = utils.ObjectDetectionUtility.getInstance().image_preporcess(np.copy(image), [self.train_input_size, self.train_input_size], np.copy(bboxes), skip_resize=True)
         
         # Sanity check
         if (bboxes.min()<0):
