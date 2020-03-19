@@ -39,15 +39,15 @@ __C.TRAIN                       = edict()
 __C.TRAIN.ANNOT_PATH            = "./dataset/LD_Dataset_01_RGB/train"
 __C.TRAIN.BATCH_SIZE            = 8 
 __C.TRAIN.INPUT_SIZE            = [608] # [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
-__C.TRAIN.SMALLSCALE_INPUT_SIZE    = [128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480]
-__C.TRAIN.LARGESCALE_INPUT_SIZE  = [512, 544, 576, 608]
+__C.TRAIN.SMALLSCALE_INPUT_SIZE = [128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480]
+__C.TRAIN.LARGESCALE_INPUT_SIZE = [512, 544, 576, 608]
 __C.TRAIN.DATA_AUG              = True
 __C.TRAIN.LEARN_RATE_INIT       = 1e-4
 __C.TRAIN.LEARN_RATE_END        = 1e-6
 __C.TRAIN.WARMUP_EPOCHS         = 2  #2
 __C.TRAIN.FISRT_STAGE_EPOCHS    = 10 #20
-__C.TRAIN.SECOND_STAGE_EPOCHS   = 30 #30
-__C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_weights/Yolov3_Coco_Pretrained.ckpt" 
+__C.TRAIN.SECOND_STAGE_EPOCHS   = 100 #30
+__C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_weights/yolov3_test_loss=8.2815.ckpt-27" 
 
 
 

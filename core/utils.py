@@ -227,7 +227,7 @@ class ObjectDetectionUtility:
         else:
             ObjectDetectionUtility.__instance = self
             
-    def image_preporcess(self, image, target_size, gt_boxes=None):
+    def image_preporcess(self, image, target_size, gt_boxes=None, augmentation_flag=False):
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         selected_channel = random.choice([0,1,2])
@@ -236,35 +236,53 @@ class ObjectDetectionUtility:
         image[:,:,2] = image[:,:, selected_channel]
 
         h,  w, c  = image.shape
+        scale=1
         fixed_h, fixed_w = target_size
 
-        # Image dims > target_size
-        if (max(h, w) > max(target_size)):
-            ih = iw = random.choice(cfg.TRAIN.LARGESCALE_INPUT_SIZE)
-            scale = min(iw/w, ih/h)
-            nw, nh  = int(scale * w), int(scale * h)
-            image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_AREA)
+        if augmentation_flag:
+            # Image dims > target_size
+            if (max(h, w) > max(target_size)):
+                ih = iw = random.choice(cfg.TRAIN.LARGESCALE_INPUT_SIZE)
+                scale = min(iw/w, ih/h)
+                nw, nh  = int(scale * w), int(scale * h)
+                image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_AREA)
 
-            image_paded = np.full(shape=[fixed_h, fixed_w, 3], fill_value=128.0)
-            dw, dh = (fixed_w - nw) // 2, (fixed_h-nh) // 2
-            image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
-            image_paded = image_paded / 255.
+
+            
+            # Image dims < target_size
+            else:
+                if (random.randint(0,100) > 90):
+                    # Kepp original dime
+                    ih, iw = h, w
+                    nw, nh  = int(w), int(h)
+                    image_resized=image
+                else:
+                    ih = iw = random.choice(cfg.TRAIN.SMALLSCALE_INPUT_SIZE)
+                    scale = min(iw/w, ih/h)
+                    nw, nh  = int(scale * w), int(scale * h)
+                    image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_CUBIC)
 
         else:
+            # Image dims > target_size
+            if (max(h, w) > max(target_size)):
+                ih, iw = target_size
+                scale = min(iw/w, ih/h)
+                nw, nh  = int(scale * w), int(scale * h)
+                image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_AREA)
 
-            if (random.randint(0,100) > 90):
-                # Keep original dimension 10% of the time
-                ih, iw = h, w
+            # Image dims < target_size
             else:
-                ih = iw = random.choice(cfg.TRAIN.SMALLSCALE_INPUT_SIZE)
-            scale = min(iw/w, ih/h)
-            nw, nh  = int(scale * w), int(scale * h)
-            image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_CUBIC)
+                # Kepp original dime
+                ih, iw = h, w
+                scale = min(iw/w, ih/h)
+                nw, nh  = int(scale * w), int(scale * h)
+                image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_CUBIC)
 
-            image_paded = np.full(shape=[fixed_h, fixed_w, 3], fill_value=128.0)
-            dw, dh = (fixed_w - nw) // 2, (fixed_h-nh) // 2
-            image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
-            image_paded = image_paded / 255.
+        # Add padding
+        image_paded = np.full(shape=[fixed_h, fixed_w, 3], fill_value=128.0)
+        dw, dh = (fixed_w - nw) // 2, (fixed_h-nh) // 2
+        image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
+        image_paded = image_paded / 255.
 
         if gt_boxes is None:
             return image_paded
@@ -274,7 +292,7 @@ class ObjectDetectionUtility:
             gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
 
             
-            if (random.randint(0,1000) > -1):
+            if (random.randint(0,1000) > 995):
                 sample_dir = "./data/userlog"
                 if not os.path.exists(sample_dir):
                     os.mkdir(sample_dir)
