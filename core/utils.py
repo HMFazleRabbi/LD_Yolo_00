@@ -274,9 +274,9 @@ class ObjectDetectionUtility:
             else:
                 # Kepp original dime
                 ih, iw = h, w
-                scale = min(iw/w, ih/h)
+                scale = 1
                 nw, nh  = int(scale * w), int(scale * h)
-                image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_CUBIC)
+                image_resized = image
 
         # Add padding
         image_paded = np.full(shape=[fixed_h, fixed_w, 3], fill_value=128.0)
