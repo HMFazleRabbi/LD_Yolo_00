@@ -37,7 +37,7 @@ __C.YOLO.DEMO_WEIGHT            = "./checkpoint/Pretrained_weights/Yolov3_Coco_P
 # Train options
 __C.TRAIN                       = edict()
 __C.TRAIN.ANNOT_PATH            = "./dataset/LD_Dataset_01_RGB/train"
-__C.TRAIN.BATCH_SIZE            = 1 
+__C.TRAIN.BATCH_SIZE            = 8 
 __C.TRAIN.INPUT_SIZE            = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
 __C.TRAIN.DATA_AUG              = True
 __C.TRAIN.LEARN_RATE_INIT       = 1e-4

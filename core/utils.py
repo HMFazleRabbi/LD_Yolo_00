@@ -58,19 +58,6 @@ def image_preporcess(image, target_size, gt_boxes=None):
         gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
         gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
 
-        # if (random.randint(0,1000) > 990):
-        #         sample_dir = os.path.normpath("./data/log/SampleImages")
-        #     if not os.path.exists(sample_dir):
-        #         os.mkdir(sample_dir)
-        #     draw_box_pts = np.zeros(shape = (gt_boxes.shape[0], 6))
-        #     draw_box_pts[:,0] = gt_boxes[:, 0]
-        #     draw_box_pts[:,2] = gt_boxes[:, 2]
-        #     draw_box_pts[:,1] = gt_boxes[:, 1]
-        #     draw_box_pts[:,3] = gt_boxes[:, 3]
-        #     draw_box_pts[:,5] = gt_boxes[:, 4] 
-        #     draw_bbox(image_paded, draw_box_pts, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True)
-        #     name= os.path.join (sample_dir , str(datetime.datetime.now()).replace(".","_").replace(":","_").replace(" ","_") +".jpg")
-        #     cv2.imwrite(name,image_paded *255)
         return image_paded, gt_boxes
 
 def draw_bbox(image, bboxes, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True):

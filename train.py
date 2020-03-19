@@ -22,7 +22,7 @@ import core.utils as utils
 from tqdm import tqdm
 
 # User define libraries
-from core.dataset import   DatasetVitroxFormatZL, DatasetVitroxFormat #MultichannelDataset, Dataset
+from core.dataset import   Dataset_LD_ZL
 from core.yolov3 import YOLOV3
 from core.config import cfg
 
@@ -53,8 +53,8 @@ class YoloTrain(object):
         self.moving_ave_decay    = cfg.YOLO.MOVING_AVE_DECAY
         self.max_bbox_per_scale  = 150
         self.train_logdir        = "./data/log/train"
-        self.trainset            = DatasetVitroxFormatZL('train')   #Dataset('train')  
-        self.testset             = DatasetVitroxFormat('test')      #Dataset('test')   
+        self.trainset            = Dataset_LD_ZL('train')   #Dataset('train')  
+        self.testset             = Dataset_LD_ZL('test')      #Dataset('test')   
         self.steps_per_period    = len(self.trainset)
         self.sess                = tf.Session(config=tf.ConfigProto(
             allow_soft_placement=False,
