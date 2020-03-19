@@ -211,40 +211,60 @@ def postprocess_boxes(pred_bbox, org_img_shape, input_size, score_threshold):
 # *************************************************************
 class ObjectDetectionUtility:
 
-    _instance = None
+    __instance = None
 
     @staticmethod 
     def getInstance():
         """ Static access method. """
-        if Singleton.__instance == None:
-            Singleton()
-        return Singleton.__instance
+        if ObjectDetectionUtility.__instance == None:
+            ObjectDetectionUtility()
+        return ObjectDetectionUtility.__instance
 
     def __init__(self):
         """ Virtually private constructor. """
         if ObjectDetectionUtility.__instance != None:
             raise Exception("Attempting to create a  object from singleton class!")
         else:
-            Singleton.__instance = self
+            ObjectDetectionUtility.__instance = self
             
-    def image_preporcess(image, target_size, gt_boxes=None, skip_resize=False):
+    def image_preporcess(self, image, target_size, gt_boxes=None):
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+        selected_channel = random.choice([0,1,2])
+        image[:,:,0] = image[:,:, selected_channel]
+        image[:,:,1] = image[:,:, selected_channel]
+        image[:,:,2] = image[:,:, selected_channel]
 
         h,  w, c  = image.shape
-        if not skip_resize:
-            ih, iw    = target_size
+        fixed_h, fixed_w = target_size
+
+        # Image dims > target_size
+        if (max(h, w) > max(target_size)):
+            ih = iw = random.choice(cfg.TRAIN.LARGESCALE_INPUT_SIZE)
+            scale = min(iw/w, ih/h)
+            nw, nh  = int(scale * w), int(scale * h)
+            image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_AREA)
+
+            image_paded = np.full(shape=[fixed_h, fixed_w, 3], fill_value=128.0)
+            dw, dh = (fixed_w - nw) // 2, (fixed_h-nh) // 2
+            image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
+            image_paded = image_paded / 255.
+
         else:
-            ih, iw    = h, w
 
-        scale = min(iw/w, ih/h)
-        nw, nh  = int(scale * w), int(scale * h)
-        image_resized = cv2.resize(image, (nw, nh))
+            if (random.randint(0,100) > 90):
+                # Keep original dimension 10% of the time
+                ih, iw = h, w
+            else:
+                ih = iw = random.choice(cfg.TRAIN.SMALLSCALE_INPUT_SIZE)
+            scale = min(iw/w, ih/h)
+            nw, nh  = int(scale * w), int(scale * h)
+            image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_CUBIC)
 
-        image_paded = np.full(shape=[ih, iw, 3], fill_value=128.0)
-        dw, dh = (iw - nw) // 2, (ih-nh) // 2
-        image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
-        image_paded = image_paded / 255.
+            image_paded = np.full(shape=[fixed_h, fixed_w, 3], fill_value=128.0)
+            dw, dh = (fixed_w - nw) // 2, (fixed_h-nh) // 2
+            image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
+            image_paded = image_paded / 255.
 
         if gt_boxes is None:
             return image_paded
@@ -253,9 +273,12 @@ class ObjectDetectionUtility:
             gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
             gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
 
-            # if (random.randint(0,1000) > -1): # 990):
-            if (random.randint(0,1000) > 990):
-                sample_dir = os.path.normpath("./data/log/SampleImages")
+            
+            if (random.randint(0,1000) > -1):
+                sample_dir = "./data/userlog"
+                if not os.path.exists(sample_dir):
+                    os.mkdir(sample_dir)
+                sample_dir = "./data/userlog/SamplePreprocessedImages"
                 if not os.path.exists(sample_dir):
                     os.mkdir(sample_dir)
                 draw_box_pts = np.zeros(shape = (gt_boxes.shape[0], 6))
