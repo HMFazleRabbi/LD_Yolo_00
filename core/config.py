@@ -39,15 +39,15 @@ __C.TRAIN                       = edict()
 __C.TRAIN.ANNOT_PATH            = "./dataset/LD_Dataset_01_RGB/train"
 __C.TRAIN.BATCH_SIZE            = 8 
 __C.TRAIN.INPUT_SIZE            = [608] # [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
-__C.TRAIN.SMALLSCALE_INPUT_SIZE = [128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480]
-__C.TRAIN.LARGESCALE_INPUT_SIZE = [512, 544, 576, 608]
+__C.TRAIN.SMALLSCALE_INPUT_SIZE = [208,224,240,256,272,288,304,320,336,352,368,384,400,416,432,448,464,480,496] 
+__C.TRAIN.LARGESCALE_INPUT_SIZE = [512, 528, 544, 560, 576, 592, 608]
 __C.TRAIN.DATA_AUG              = True
-__C.TRAIN.LEARN_RATE_INIT       = 1e-4
+__C.TRAIN.LEARN_RATE_INIT       = 1e-3  #1e-4
 __C.TRAIN.LEARN_RATE_END        = 1e-6
-__C.TRAIN.WARMUP_EPOCHS         = 2  #2
-__C.TRAIN.FISRT_STAGE_EPOCHS    = 10 #20
-__C.TRAIN.SECOND_STAGE_EPOCHS   = 100 #30
-__C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_weights/yolov3_test_loss=8.2815.ckpt-27" 
+__C.TRAIN.WARMUP_EPOCHS         = 2     #2
+__C.TRAIN.FISRT_STAGE_EPOCHS    = 20    #20
+__C.TRAIN.SECOND_STAGE_EPOCHS   = 500   #30
+__C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_weights/Yolov3_Coco_Pretrained.ckpt" 
 
 
 
@@ -64,9 +64,4 @@ __C.TEST.WEIGHT_FILE            = "./checkpoint/ActiveCheckpoint/yolov3_test_los
 __C.TEST.SHOW_LABEL             = True
 __C.TEST.SCORE_THRESHOLD        = 0.75
 __C.TEST.IOU_THRESHOLD          = 0.45
-
-
-
-
-
 

@@ -230,13 +230,16 @@ class ObjectDetectionUtility:
     def image_preporcess(self, image, target_size, gt_boxes=None, augmentation_flag=False):
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-        selected_channel = random.choice([0,1,2])
+        if augmentation_flag:
+            selected_channel = random.choice([0,1,2])
+        else: 
+            selected_channel = 0
         image[:,:,0] = image[:,:, selected_channel]
         image[:,:,1] = image[:,:, selected_channel]
         image[:,:,2] = image[:,:, selected_channel]
 
         h,  w, c  = image.shape
-        scale=1
+        scale=1.
         fixed_h, fixed_w = target_size
 
         if augmentation_flag:
@@ -246,7 +249,6 @@ class ObjectDetectionUtility:
                 scale = min(iw/w, ih/h)
                 nw, nh  = int(scale * w), int(scale * h)
                 image_resized = cv2.resize(image, (nw, nh), interpolation = cv2.INTER_AREA)
-
 
             
             # Image dims < target_size
@@ -292,7 +294,7 @@ class ObjectDetectionUtility:
             gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
 
             
-            if (random.randint(0,1000) > 995):
+            if (random.randint(0,1000) > -995):
                 sample_dir = "./data/userlog"
                 if not os.path.exists(sample_dir):
                     os.mkdir(sample_dir)
