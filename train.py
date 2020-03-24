@@ -190,7 +190,7 @@ class YoloTrain(object):
             pbar = tqdm(self.testset)
             iExample=0
             for test_data in pbar:
-                test_step_loss, test_step_giou_loss, test_step_conf_loss, test_step_prob_loss , pred_sbbox, pred_mbbox, pred_lbbox = self.sess.run([ self.loss, self.giou_loss, self.conf_loss, self.prob_loss, self.pred_sbbox, self.pred_mbbox, self.pred_lbbox],
+                test_step_loss, test_step_giou_loss, test_step_conf_loss, test_step_prob_loss = self.sess.run([ self.loss, self.giou_loss, self.conf_loss, self.prob_loss],
                     feed_dict = {
                         self.input_data:   test_data[0],
                         self.label_sbbox:  test_data[1],
