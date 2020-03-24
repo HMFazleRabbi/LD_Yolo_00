@@ -18,10 +18,12 @@ from core.yolov3 import YOLOV3
 from core.config import cfg
 
 
-pb_file = "./yolov3_coco.pb"
-ckpt_file = cfg.TRAIN.INITIAL_WEIGHT # "./checkpoint/yolov3_coco_demo.ckpt"
-output_node_names = ["input/input_data", "pred_sbbox/concat_2", "pred_mbbox/concat_2", "pred_lbbox/concat_2"]
+# Output
+pb_file = "./yolov3_ld_00.pb"
+# Input
+ckpt_file = "D:/FZ_WS/JyNB/Yolo_LD/Tf_Yolov3/checkpoint/ActiveCheckpoint/checkpoint-Exp7/checkpoint/yolov3_test_loss=2.7145.ckpt-515" #cfg.TRAIN.INITIAL_WEIGHT # "./checkpoint/yolov3_coco_demo.ckpt"
 
+output_node_names = ["input/input_data", "pred_sbbox/concat_2", "pred_mbbox/concat_2", "pred_lbbox/concat_2"]
 with tf.name_scope('input'):
     input_data =  tf.placeholder(dtype=tf.float32, name='input_data')
 

@@ -286,6 +286,7 @@ class ObjectDetectionUtility:
         image_paded[dh:nh+dh, dw:nw+dw, :] = image_resized
         image_paded = image_paded / 255.
 
+        
         if gt_boxes is None:
             return image_paded
 
@@ -294,7 +295,7 @@ class ObjectDetectionUtility:
             gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
 
             
-            if (random.randint(0,1000) > -995):
+            if (random.randint(0,1000) > 1000):
                 sample_dir = "./data/userlog"
                 if not os.path.exists(sample_dir):
                     os.mkdir(sample_dir)
@@ -307,9 +308,11 @@ class ObjectDetectionUtility:
                 draw_box_pts[:,1] = gt_boxes[:, 1]
                 draw_box_pts[:,3] = gt_boxes[:, 3]
                 draw_box_pts[:,5] = gt_boxes[:, 4] 
-                draw_bbox(image_paded, draw_box_pts, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True)
+                img = np.copy(image_paded)
+                draw_bbox(img, draw_box_pts, classes=read_class_names(cfg.YOLO.CLASSES), show_label=True)
                 name= os.path.join (sample_dir , str(datetime.datetime.now()).replace(".","_").replace(":","_").replace(" ","_") +".jpg")
-                cv2.imwrite(name,image_paded *255)
+                cv2.imwrite(name,img *255)
+            
             return image_paded, gt_boxes
 
 

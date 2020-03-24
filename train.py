@@ -160,7 +160,7 @@ class YoloTrain(object):
                 train_op = self.train_op_with_all_variables
 
             pbar = tqdm(self.trainset)
-            train_epoch_loss, test_epoch_loss = [], []
+            train_epoch_loss, test_epoch_loss, test_epoch_giou_loss, test_epoch_conf_loss, test_epoch_prob_loss= [], [], [], [], []
             iExample=0
 
             for train_data in pbar:
@@ -180,7 +180,7 @@ class YoloTrain(object):
 
                 train_epoch_loss.append(train_step_loss)
                 self.summary_writer.add_summary(summary, global_step_val)
-                pbar.set_description("train loss: %.2f" %train_step_loss)
+                pbar.set_description("Step %8d |train loss: %.2f" %(global_step_val, train_step_loss))
 
                 # Random sleep added because of slow cpu
                 # if (iExample < 5 and epoch <= (self.first_stage_epochs + self.warmup_periods)):
@@ -190,17 +190,22 @@ class YoloTrain(object):
             pbar = tqdm(self.testset)
             iExample=0
             for test_data in pbar:
-                test_step_loss = self.sess.run( self.loss, feed_dict={
-                                                self.input_data:   test_data[0],
-                                                self.label_sbbox:  test_data[1],
-                                                self.label_mbbox:  test_data[2],
-                                                self.label_lbbox:  test_data[3],
-                                                self.true_sbboxes: test_data[4],
-                                                self.true_mbboxes: test_data[5],
-                                                self.true_lbboxes: test_data[6],
-                                                self.trainable:    False,
-                })
+                test_step_loss, test_step_giou_loss, test_step_conf_loss, test_step_prob_loss , pred_sbbox, pred_mbbox, pred_lbbox = self.sess.run([ self.loss, self.giou_loss, self.conf_loss, self.prob_loss, self.pred_sbbox, self.pred_mbbox, self.pred_lbbox],
+                    feed_dict = {
+                        self.input_data:   test_data[0],
+                        self.label_sbbox:  test_data[1],
+                        self.label_mbbox:  test_data[2],
+                        self.label_lbbox:  test_data[3],
+                        self.true_sbboxes: test_data[4],
+                        self.true_mbboxes: test_data[5],
+                        self.true_lbboxes: test_data[6],
+                        self.trainable:    False,
+                    }
+                )
                 test_epoch_loss.append(test_step_loss)
+                test_epoch_giou_loss.append(test_step_giou_loss)
+                test_epoch_conf_loss.append(test_step_conf_loss)
+                test_epoch_prob_loss.append(test_step_prob_loss)
                 pbar.set_description("test loss: %.2f" %test_step_loss)
 
                 # Random sleep added because of slow cpu
@@ -208,11 +213,12 @@ class YoloTrain(object):
                 #     time.sleep(5 - iExample)
                 #     iExample = iExample +1
 
-            train_epoch_loss, test_epoch_loss = np.mean(train_epoch_loss), np.mean(test_epoch_loss)
-            ckpt_file = "./checkpoint/yolov3_test_loss=%.4f.ckpt" % test_epoch_loss
+            mean_train_epoch_loss, mean_test_epoch_loss = np.mean(train_epoch_loss), np.mean(test_epoch_loss)
+            ckpt_file = "./checkpoint/yolov3_test_loss=%.4f.ckpt" % mean_test_epoch_loss
             log_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+            print("test loss details:- test_epoch_giou_loss: %.2f\t test_epoch_conf_loss: %.2f\t test_epoch_prob_loss: %.2f" % (np.mean(test_epoch_giou_loss), np.mean(test_epoch_conf_loss), np.mean(test_epoch_prob_loss)))
             print("=> Epoch: %2d Time: %s Train loss: %.2f Test loss: %.2f Saving %s ..."
-                            %(epoch, log_time, train_epoch_loss, test_epoch_loss, ckpt_file))
+                            %(epoch, log_time, mean_train_epoch_loss, mean_test_epoch_loss, ckpt_file))
             self.saver.save(self.sess, ckpt_file, global_step=epoch)
             
 

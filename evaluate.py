@@ -21,6 +21,12 @@ import core.utils as utils
 from core.config import cfg
 from core.yolov3 import YOLOV3
 
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Original evaluation and test class
+#   Date Modified: 20200320_1631
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
 class YoloTest(object):
     def __init__(self):
         self.input_size       = cfg.TEST.INPUT_SIZE
@@ -159,6 +165,14 @@ class YoloTest(object):
                     f.write(bbox_mess)
                 print('\t' + str(bbox_mess).strip())
 
+
+# *************************************************************
+#   Author       : HM Fazle Rabbi
+#   Description  : Lead detection test inherited from original 
+#   to deal with the loding format of the board extracted dataset.
+#   Date Modified: 20200320_1632
+#   Copyright © 2000, MV Technology Ltd. All rights reserved.
+# *************************************************************
 class YoloLDTest(YoloTest):
 
     def __init__(self):
@@ -311,12 +325,11 @@ class YoloLDTest(YoloTest):
                         print('\t' + str(bbox_mess).strip())
 
 
-class YoloLDTestZL(YoloTest):
+class YoloLDTest_ZLDataset(YoloTest):
 
     def __init__(self):
         super().__init__()
         self.annotations = self.load_annotations()
-
 
     
     def load_annotations(self):
@@ -332,8 +345,6 @@ class YoloLDTestZL(YoloTest):
                 txt = fname + ' ' + txt
                 if (len(txt.strip().split(',')[1:]) !=0):
                     annotations.append(txt.strip())
-
-        #np.random.shuffle(annotations)
         return annotations
     
     def bodylead_lbl_parser(self, x):
@@ -343,6 +354,30 @@ class YoloLDTestZL(YoloTest):
              return 1
         else:
             return int(float(x))
+
+    def predict(self, gt_boxes, image):
+
+        org_image = np.copy(image)
+        org_h, org_w, _ = org_image.shape
+
+        image_data, gt_boxes = utils.ObjectDetectionUtility.getInstance().image_preporcess(image, [self.input_size, self.input_size], gt_boxes,  cfg.TEST.DATA_AUG)
+        image_data = image_data[np.newaxis, ...]
+
+        pred_sbbox, pred_mbbox, pred_lbbox = self.sess.run(
+            [self.pred_sbbox, self.pred_mbbox, self.pred_lbbox],
+            feed_dict={
+                self.input_data: image_data,
+                self.trainable: False
+            }
+        )
+        # print( pred_sbbox, pred_mbbox, pred_lbbox )
+        pred_bbox = np.concatenate([np.reshape(pred_sbbox, (-1, 5 + self.num_classes)),
+                                    np.reshape(pred_mbbox, (-1, 5 + self.num_classes)),
+                                    np.reshape(pred_lbbox, (-1, 5 + self.num_classes))], axis=0)
+        bboxes = utils.postprocess_boxes(pred_bbox, (org_h, org_w), self.input_size, self.score_threshold)
+        bboxes = utils.nms(bboxes, self.iou_threshold)
+        return bboxes
+
 
 
     def evaluate(self):
@@ -363,9 +398,19 @@ class YoloLDTestZL(YoloTest):
                 if not os.path.exists(image_path):
                     raise KeyError("%s does not exist ... " %image_path)
                 image = np.array(cv2.imread(image_path))
-                # bbox_data_gt = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
                 bbox_data_gt = np.array([list(map(self.bodylead_lbl_parser, box.split(','))) for box in line[1:]])
                 bbox_data_gt[:, [2,3]]=bbox_data_gt[:, [0,1]] + bbox_data_gt[:, [2,3]]
+
+                # Sanity check
+                if ((bbox_data_gt.min()<0)  and (bbox_data_gt[:, :-1] !=0)):
+                    raise KeyError ("Error (parse_annotation(self, annotation)): bbox_data_gt.min()<0 ")
+                if (bbox_data_gt[:,[0,2]].max()>image.shape[1] ):
+                    raise KeyError("Error (parse_annotation(self, annotation)): bbox_data_gt[:,[0,2]].max()>image.shape[1] ")
+                if (bbox_data_gt[:,[1,3]].max()>image.shape[0] ):
+                    raise KeyError("Error (parse_annotation(self, annotation)): bbox_data_gt[:,[1,3]].max()>image.shape[0] ")
+                if (len(bbox_data_gt[bbox_data_gt[:, 4]==0]) > 1):
+                    raise KeyError("Error (parse_annotation(self, annotation)): len(bbox_data_gt[bbox_data_gt[:, 4]==0]) > 1")
+
 
                 if len(bbox_data_gt) == 0:
                     bboxes_gt=[]
@@ -373,6 +418,8 @@ class YoloLDTestZL(YoloTest):
                 else:
                     bboxes_gt, classes_gt = bbox_data_gt[:, :4], bbox_data_gt[:, 4]
                 ground_truth_path = os.path.join(ground_truth_dir_path, str(num) + '.txt')
+
+                bboxes_pr = self.predict(bbox_data_gt, image)
 
                 image_name = os.path.split(image_path)[1]
                 print('=> ground truth of %s:' % image_name)
@@ -386,7 +433,6 @@ class YoloLDTestZL(YoloTest):
                         print('\t' + str(bbox_mess).strip())
                 print('=> predict result of %s:' % image_name)
                 predict_result_path = os.path.join(predicted_dir_path, str(num) + '.txt')
-                bboxes_pr = self.predict(image)
 
                 # Writer
                 if self.write_image:
@@ -407,7 +453,7 @@ class YoloLDTestZL(YoloTest):
 
 
 if __name__ == '__main__': 
-    YoloLDTestZL().evaluate()
+    YoloLDTest_ZLDataset().evaluate()
 
 
 
