@@ -18,3 +18,7 @@ bin-release/
 # information for Eclipse / Flash Builder.
 .vscode/settings.json
 data/dataset/
+checkpoint/
+data/log
+core/__pycache__
+scripts/.ipynb_checkpoints/
