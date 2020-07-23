@@ -18,9 +18,9 @@ import tensorflow as tf
 from PIL import Image
 
 return_elements = ["input/input_data:0", "pred_sbbox/concat_2:0", "pred_mbbox/concat_2:0", "pred_lbbox/concat_2:0"]
-pb_file         = "./yolov3_coco.pb"
-image_path      = "./docs/images/road.jpeg"
-num_classes     = 80
+pb_file         = "./checkpoint/Exp-1/yolov3_coco.pb" 
+image_path      = "./data/dataset/Exp-01/DB_09_V03/DB_Updater/test/5e97d88631f3430c6e9a40f5.jpg"
+num_classes     = 2
 input_size      = 416
 graph           = tf.Graph()
 

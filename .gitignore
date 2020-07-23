@@ -22,3 +22,7 @@ checkpoint/
 data/log
 core/__pycache__
 scripts/.ipynb_checkpoints/
+checkpoint
+data/detection/
+mAP/
+scripts/Cpp/
