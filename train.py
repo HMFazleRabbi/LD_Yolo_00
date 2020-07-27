@@ -21,6 +21,7 @@ from tqdm import tqdm
 from core.dataset import Dataset
 from core.yolov3 import YOLOV3
 from core.config import cfg
+import cv2
 
 
 class YoloTrain(object):
@@ -42,6 +43,10 @@ class YoloTrain(object):
         self.testset             = Dataset('test')
         self.steps_per_period    = len(self.trainset)
         self.sess                = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        self.iou_threshold       = cfg.TEST.IOU_THRESHOLD
+        self.score_threshold     = cfg.TEST.SCORE_THRESHOLD
+        self.show_label          = cfg.TEST.SHOW_LABEL
+        self.input_size          = cfg.TEST.INPUT_SIZE
 
         with tf.name_scope('define_input'):
             self.input_data   = tf.placeholder(dtype=tf.float32, name='input_data')
@@ -60,6 +65,8 @@ class YoloTrain(object):
                                                     self.label_sbbox,  self.label_mbbox,  self.label_lbbox,
                                                     self.true_sbboxes, self.true_mbboxes, self.true_lbboxes)
             self.loss = self.giou_loss + self.conf_loss + self.prob_loss
+            self.pred_sbbox, self.pred_mbbox, self.pred_lbbox = self.model.pred_sbbox, self.model.pred_mbbox, self.model.pred_lbbox
+        
 
         with tf.name_scope('learn_rate'):
             self.global_step = tf.Variable(1.0, dtype=tf.float64, trainable=False, name='global_step')
@@ -109,7 +116,7 @@ class YoloTrain(object):
             self.saver  = tf.train.Saver(tf.global_variables(), max_to_keep=10)
 
         with tf.name_scope('summary'):
-            tf.summary.scalar("learn_rate",      self.learn_rate)
+            tf.summary.scalar("learn_rate", self.learn_rate)
             tf.summary.scalar("giou_loss",  self.giou_loss)
             tf.summary.scalar("conf_loss",  self.conf_loss)
             tf.summary.scalar("prob_loss",  self.prob_loss)
@@ -141,7 +148,9 @@ class YoloTrain(object):
             pbar = tqdm(self.trainset)
             train_epoch_loss, test_epoch_loss = [], []
 
+            # Training
             for train_data in pbar:
+
                 _, summary, train_step_loss, global_step_val = self.sess.run(
                     [train_op, self.write_op, self.loss, self.global_step],feed_dict={
                                                 self.input_data:   train_data[0],
@@ -153,13 +162,18 @@ class YoloTrain(object):
                                                 self.true_lbboxes: train_data[6],
                                                 self.trainable:    True,
                 })
+                
+
 
                 train_epoch_loss.append(train_step_loss)
                 self.summary_writer.add_summary(summary, global_step_val)
                 pbar.set_description("train loss: %.2f" %train_step_loss)
-                break
-
-            for test_data in self.testset:
+            
+            
+            # Testing
+            test_images = []
+            for i, test_data in enumerate(self.testset):
+                #Test loss
                 test_step_loss = self.sess.run( self.loss, feed_dict={
                                                 self.input_data:   test_data[0],
                                                 self.label_sbbox:  test_data[1],
@@ -170,8 +184,23 @@ class YoloTrain(object):
                                                 self.true_lbboxes: test_data[6],
                                                 self.trainable:    False,
                 })
-
                 test_epoch_loss.append(test_step_loss)
+
+                #Test image
+                if  (i < 5 and not (epoch%3)):
+                    test_image = (np.squeeze(test_data[0], axis=0)*256).astype(int)
+                    bboxes_pr = self.predict(test_image)
+                    test_image = utils.draw_bbox( test_image, bboxes_pr, show_label=self.show_label)
+                    test_images.append(cv2.resize(test_image.astype('float32'), (self.input_size, self.input_size)))
+                
+                
+
+            # Summary
+            if not (epoch%3):
+                summary_op = tf.summary.image("Test Epoch-%.2d"%(epoch), np.array(test_images), max_outputs=10)
+                summary = self.sess.run(summary_op)
+                self.summary_writer.add_summary(summary, epoch)
+
 
             train_epoch_loss, test_epoch_loss = np.mean(train_epoch_loss), np.mean(test_epoch_loss)
             ckpt_file = "%s/%s_test_loss=%.4f.ckpt" % (cfg.TRAIN.OUTPUT_WEIGHT, os.path.basename(cfg.TRAIN.OUTPUT_WEIGHT), test_epoch_loss)
@@ -180,6 +209,31 @@ class YoloTrain(object):
                             %(epoch, log_time, train_epoch_loss, test_epoch_loss, ckpt_file))
             self.saver.save(self.sess, ckpt_file, global_step=epoch)
 
+
+
+    def predict(self, image):
+
+        org_image = np.float32(image)
+        org_h, org_w, _ = org_image.shape
+
+        image_data = utils.image_preporcess(org_image, [self.input_size, self.input_size])
+        image_data = image_data[np.newaxis, ...]
+
+        pred_sbbox, pred_mbbox, pred_lbbox = self.sess.run(
+            [self.pred_sbbox, self.pred_mbbox, self.pred_lbbox],
+            feed_dict={
+                self.input_data: image_data,
+                self.trainable: False
+            }
+        )
+
+        pred_bbox = np.concatenate([np.reshape(pred_sbbox, (-1, 5 + self.num_classes)),
+                                    np.reshape(pred_mbbox, (-1, 5 + self.num_classes)),
+                                    np.reshape(pred_lbbox, (-1, 5 + self.num_classes))], axis=0)
+        bboxes = utils.postprocess_boxes(pred_bbox, (org_h, org_w), self.input_size, self.score_threshold)
+        bboxes = utils.nms(bboxes, self.iou_threshold)
+
+        return bboxes
 
 
 if __name__ == '__main__': YoloTrain().train()

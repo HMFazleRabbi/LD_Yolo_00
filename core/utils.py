@@ -179,6 +179,7 @@ def postprocess_boxes(pred_bbox, org_img_shape, input_size, score_threshold):
     # # (1) (x, y, w, h) --> (xmin, ymin, xmax, ymax)
     pred_coor = np.concatenate([pred_xywh[:, :2] - pred_xywh[:, 2:] * 0.5,
                                 pred_xywh[:, :2] + pred_xywh[:, 2:] * 0.5], axis=-1)
+
     # # (2) (xmin, ymin, xmax, ymax) -> (xmin_org, ymin_org, xmax_org, ymax_org)
     org_h, org_w = org_img_shape
     resize_ratio = min(input_size / org_w, input_size / org_h)
