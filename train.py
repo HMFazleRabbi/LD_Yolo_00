@@ -169,7 +169,7 @@ class YoloTrain(object):
                 self.summary_writer.add_summary(summary, global_step_val)
                 pbar.set_description("train loss: %.2f" %train_step_loss)
             
-            
+
             # Testing
             test_images = []
             for i, test_data in enumerate(self.testset):
