@@ -36,33 +36,33 @@ __C.YOLO.DEMO_WEIGHT            = "./checkpoint/Pretrained_Weight/yolov3_coco_de
 # Train options
 __C.TRAIN                       = edict()
 
-__C.TRAIN.ANNOT_PATH            = "./data/dataset/Exp-02/train.txt"
+__C.TRAIN.ANNOT_PATH            = "./data/dataset/Exp-03/train.txt"
 __C.TRAIN.BATCH_SIZE            = 1
 __C.TRAIN.INPUT_SIZE            = [1024, 960, 896, 832, 768, 704]
 __C.TRAIN.DATA_AUG              = True
 __C.TRAIN.LEARN_RATE_INIT       = 1e-4
 __C.TRAIN.LEARN_RATE_END        = 1e-6
 __C.TRAIN.WARMUP_EPOCHS         = 2
-__C.TRAIN.FISRT_STAGE_EPOCHS    = 20
-__C.TRAIN.SECOND_STAGE_EPOCHS   = 30
+__C.TRAIN.FISRT_STAGE_EPOCHS    = 30
+__C.TRAIN.SECOND_STAGE_EPOCHS   = 50
 __C.TRAIN.INITIAL_WEIGHT        = "./checkpoint/Pretrained_Weight/yolov3_coco_demo.ckpt"
-__C.TRAIN.OUTPUT_WEIGHT         = "./checkpoint/Exp-2-0"
+__C.TRAIN.OUTPUT_WEIGHT         = "./checkpoint/Exp-3-1"
 
 
 
 # TEST options
 __C.TEST                        = edict()
 
-__C.TEST.ANNOT_PATH             = "./data/dataset/Exp-02/test.txt"
+__C.TEST.ANNOT_PATH             = "./data/dataset/Exp-03/test.txt"
 __C.TEST.BATCH_SIZE             = 1
 __C.TEST.INPUT_SIZE             = 1024
 __C.TEST.DATA_AUG               = False
 __C.TEST.WRITE_IMAGE            = True
 __C.TEST.WRITE_IMAGE_PATH       = "./data/detection/"
 __C.TEST.WRITE_IMAGE_SHOW_LABEL = True
-__C.TEST.WEIGHT_FILE            = "./checkpoint/Exp-1/yolov3_test_loss=35.0684.ckpt-25"
+__C.TEST.WEIGHT_FILE            = "./checkpoint/Exp-2-0/Exp-2-0_test_loss=10.0770.ckpt-22"
 __C.TEST.SHOW_LABEL             = True
-__C.TEST.SCORE_THRESHOLD        = 0.3
+__C.TEST.SCORE_THRESHOLD        = 0.60
 __C.TEST.IOU_THRESHOLD          = 0.45
 
 
