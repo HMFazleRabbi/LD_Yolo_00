@@ -157,7 +157,7 @@ class YoloTrain(object):
                 train_epoch_loss.append(train_step_loss)
                 self.summary_writer.add_summary(summary, global_step_val)
                 pbar.set_description("train loss: %.2f" %train_step_loss)
-                break
+            
 
             for test_data in self.testset:
                 test_step_loss = self.sess.run( self.loss, feed_dict={
