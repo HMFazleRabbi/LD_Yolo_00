@@ -125,7 +125,8 @@ class YoloTrain(object):
     def train(self):
         self.sess.run(tf.global_variables_initializer())
         try:
-            print('=> Restoring weights from: %s ... ' % self.initial_weight)
+            print('=> Restoring weights------------------- from: %s ... ' % self.initial_weight)
+            print(os.path.isfile(self.initial_weight))
             self.loader.restore(self.sess, self.initial_weight)
         except:
             print('=> %s does not exist !!!' % self.initial_weight)
