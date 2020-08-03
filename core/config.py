@@ -53,14 +53,14 @@ __C.TRAIN.OUTPUT_WEIGHT         = "./checkpoint/Exp-2-0"
 # TEST options
 __C.TEST                        = edict()
 
-__C.TEST.ANNOT_PATH             = "./data/dataset/Exp-02/test.txt"
+__C.TEST.ANNOT_PATH             = "./data/dataset/Exp-02/train.txt"
 __C.TEST.BATCH_SIZE             = 1
 __C.TEST.INPUT_SIZE             = 512
 __C.TEST.DATA_AUG               = False
 __C.TEST.WRITE_IMAGE            = True
 __C.TEST.WRITE_IMAGE_PATH       = "./data/detection/"
 __C.TEST.WRITE_IMAGE_SHOW_LABEL = True
-__C.TEST.WEIGHT_FILE            = "./checkpoint/Exp-2-0/Exp-2-0_test_loss=253.1064.ckpt-50"
+__C.TEST.WEIGHT_FILE            = "./checkpoint/Exp-2-0/Exp-2-0_test_loss=nan.ckpt-50"
 __C.TEST.SHOW_LABEL             = True
 __C.TEST.SCORE_THRESHOLD        = 0.3
 __C.TEST.IOU_THRESHOLD          = 0.45
