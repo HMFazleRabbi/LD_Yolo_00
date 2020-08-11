@@ -168,11 +168,7 @@ class YoloTrain(object):
                 train_epoch_loss.append(train_step_loss)
                 self.summary_writer.add_summary(summary, global_step_val)
                 pbar.set_description("train loss: %.2f" %train_step_loss)
-<<<<<<< HEAD
-                
-=======
             
->>>>>>> 2c79434a8265b65d69219d9fe29500688bb695d6
 
             # Testing
             test_images = []
@@ -194,14 +190,14 @@ class YoloTrain(object):
                 if  (i < 5 and not (epoch%3)):
                     test_image = (np.squeeze(test_data[0], axis=0)*256).astype(int)
                     bboxes_pr = self.predict(test_image)
-                    test_image = utils.draw_bbox( test_image, bboxes_pr, show_label=self.show_label)
+                    test_image = utils.draw_bbox(  np.zeros([1024,1024, 1]), bboxes_pr, show_label=self.show_label)
                     test_images.append(cv2.resize(test_image.astype('float32'), (self.input_size, self.input_size)))
-                
-                
+
+
 
             # Summary
             if not (epoch%3):
-                summary_op = tf.summary.image("Test Epoch-%.2d"%(epoch), np.array(test_images), max_outputs=10)
+                summary_op = tf.summary.image("Test Epoch-%.2d"%(epoch), np.expand_dims(np.array(test_images), axis=3), max_outputs=10)
                 summary = self.sess.run(summary_op)
                 self.summary_writer.add_summary(summary, epoch)
 
@@ -241,7 +237,6 @@ class YoloTrain(object):
 
 
 if __name__ == '__main__': YoloTrain().train()
-
 
 
 
