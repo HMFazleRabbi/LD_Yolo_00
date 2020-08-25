@@ -22,6 +22,7 @@ from core.dataset import Dataset
 from core.yolov3 import YOLOV3
 from core.config import cfg
 import cv2
+from PIL import Image
 
 
 class YoloTrain(object):
@@ -38,11 +39,11 @@ class YoloTrain(object):
         self.time                = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
         self.moving_ave_decay    = cfg.YOLO.MOVING_AVE_DECAY
         self.max_bbox_per_scale  = 150
-        self.train_logdir        = "./data/log/train"
+        self.train_logdir        = cfg.TRAIN.LOGDIR
         self.trainset            = Dataset('train')
         self.testset             = Dataset('test')
         self.steps_per_period    = len(self.trainset)
-        self.sess                = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        self.sess                = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, gpu_options = tf.GPUOptions(visible_device_list="0")))
         self.iou_threshold       = cfg.TEST.IOU_THRESHOLD
         self.score_threshold     = cfg.TEST.SCORE_THRESHOLD
         self.show_label          = cfg.TEST.SHOW_LABEL
@@ -149,7 +150,7 @@ class YoloTrain(object):
             train_epoch_loss, test_epoch_loss = [], []
 
             # Training
-            for train_data in pbar:
+            for itrain_data, train_data in enumerate(pbar):
 
                 _, summary, train_step_loss, global_step_val = self.sess.run(
                     [train_op, self.write_op, self.loss, self.global_step],feed_dict={
@@ -168,11 +169,13 @@ class YoloTrain(object):
                 train_epoch_loss.append(train_step_loss)
                 self.summary_writer.add_summary(summary, global_step_val)
                 pbar.set_description("train loss: %.2f" %train_step_loss)
+                
             
 
             # Testing
             test_images = []
             for i, test_data in enumerate(self.testset):
+                
                 #Test loss
                 test_step_loss = self.sess.run( self.loss, feed_dict={
                                                 self.input_data:   test_data[0],
@@ -187,12 +190,12 @@ class YoloTrain(object):
                 test_epoch_loss.append(test_step_loss)
 
                 #Test image
-                if  (i < 5 and not (epoch%3)):
+                if  (i < 10 and not (epoch%3)):
                     test_image = (np.squeeze(test_data[0], axis=0)*256).astype(int)
                     bboxes_pr = self.predict(test_image)
-                    test_image = utils.draw_bbox( test_image, bboxes_pr, show_label=self.show_label)
+                    test_image = utils.draw_bbox( test_image.astype(np.uint8), bboxes_pr, show_label=self.show_label)
                     test_images.append(cv2.resize(test_image.astype('float32'), (self.input_size, self.input_size)))
-                
+                if (i==10):break
                 
 
             # Summary
