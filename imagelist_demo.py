@@ -27,6 +27,8 @@ def main():
     return_elements = ["input/input_data:0", "pred_sbbox/concat_2:0", "pred_mbbox/concat_2:0", "pred_lbbox/concat_2:0"]
     num_classes     = 2
     input_size      = 1024
+    score_threshold = 0.60
+    nms_threshold   = 0.45
 
 
     #Variables
@@ -56,8 +58,8 @@ def main():
                                         np.reshape(pred_mbbox, (-1, 5 + num_classes)),
                                         np.reshape(pred_lbbox, (-1, 5 + num_classes))], axis=0)
 
-            bboxes = utils.postprocess_boxes(pred_bbox, original_image_size, input_size, 0.3)
-            bboxes = utils.nms(bboxes, 0.3, method='nms')
+            bboxes = utils.postprocess_boxes(pred_bbox, original_image_size, input_size, score_threshold)
+            bboxes = utils.nms(bboxes, nms_threshold, method='nms')
 
             # Output
             image = utils.draw_bbox(original_image, bboxes, show_label=False)
