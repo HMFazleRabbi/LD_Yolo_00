@@ -195,7 +195,7 @@ class YoloTrain(object):
                     bboxes_pr = self.predict(test_image)
                     test_image = utils.draw_bbox( test_image.astype(np.uint8), bboxes_pr, show_label=self.show_label)
                     test_images.append(cv2.resize(test_image.astype('float32'), (self.input_size, self.input_size)))
-                if (i==10):break
+                
                 
 
             # Summary
