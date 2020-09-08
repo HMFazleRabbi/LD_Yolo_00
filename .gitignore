@@ -26,3 +26,5 @@ checkpoint
 data/detection/
 mAP/
 scripts/Cpp/
+scripts/label/
+

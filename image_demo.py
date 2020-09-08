@@ -11,17 +11,17 @@
 #
 #================================================================
 
-import cv2
+import cv2, os
 import numpy as np
 import core.utils as utils
 import tensorflow as tf
 from PIL import Image
 
 return_elements = ["input/input_data:0", "pred_sbbox/concat_2:0", "pred_mbbox/concat_2:0", "pred_lbbox/concat_2:0"]
-pb_file         = "./checkpoint/Exp-1/yolov3_coco.pb" 
-image_path      = "./data/dataset/Exp-01/DB_09_V03/DB_Updater/test/5e97d88631f3430c6e9a40f5.jpg"
-num_classes     = 2
-input_size      = 416
+pb_file         = "./checkpoint/Exp-2-0/yolov3_coco.pb" 
+image_path      = "C:/Users/V510/Desktop/ZL/_0603__180.jpg"
+num_classes     = 1
+input_size      = 1024
 graph           = tf.Graph()
 
 original_image = cv2.imread(image_path)
@@ -43,10 +43,12 @@ pred_bbox = np.concatenate([np.reshape(pred_sbbox, (-1, 5 + num_classes)),
                             np.reshape(pred_lbbox, (-1, 5 + num_classes))], axis=0)
 
 bboxes = utils.postprocess_boxes(pred_bbox, original_image_size, input_size, 0.3)
-bboxes = utils.nms(bboxes, 0.45, method='nms')
-image = utils.draw_bbox(original_image, bboxes)
+bboxes = utils.nms(bboxes, 0.3, method='nms')
+image = utils.draw_bbox(original_image, bboxes, show_label=False)
 image = Image.fromarray(image)
+image.save(os.path.basename(image_path))
 image.show()
+
 
 
 
